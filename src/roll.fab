@@ -1,4 +1,4 @@
-charmap("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-,`>/()\".:·")
+charmap("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ·.-*%⊏⊐")
 // []
 
 vars /game_vars
@@ -7,13 +7,13 @@ vars /game_vars
 data /backgrounds
     [] bg
         ("································"
+         "············00%·---------------·"
+         "···00.00*·······················"
+         "············00%·---------------·"
+         "···0·TAPS·······················"
+         "············00%·---------------·"
          "································"
-         "·····HELLO·WORLD················"
-         "································"
-         "································"
-         "································"
-         "································"
-         "································"
+         "·⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐·"
          "································"
          "································"
          "································"
@@ -49,14 +49,23 @@ fn load_bg()
     for U i = 0; i < 64; i += 1
         {PPUDATA}(%00000000)
 
+    // do it all again for second nametable
+
+irq subframe_poll()
+    // immediately schedule next irq
+    // waste cycles for more accuracy??
+    // poll controller
+    // if L/R, update active buffer with next tile
+
 nmi main_nmi()
-    // Update OAM and poll the pads:
+    // Update OAM and poll the pads: (TODO: measure timing)
     ppu_upload_oam_poll_pads(0)
 
-    // Turn on rendering:
-    {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
+    // update roll viz if needed (2 tiles)
+    // update frame row if needed (2 tiles, maybe 4)
+    // update probability buffers (45 tiles???)
 
-    // Reset the scroll
+    // set scroll to show current roll viz row
     ppu_reset_scroll(0, 0)
 
 mode main()
@@ -66,16 +75,31 @@ mode main()
     ppu_upload_palette()
 
     // Set and load the level:
+    hide_oam(0)
     load_bg()
 
-    // Tell the NES to trigger NMI once per frame:
+    // enable nmi, turn on rendering
     {PPUCTRL}(PPUCTRL_NMI_ON)
+    {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
 
     // Wait forever, one frame at a time:
     while true
-        update_pads()
+        // all computations here are done with the previous frame's inputs
+        // i.e. only what's been completely finalized
+
+        // if x frames since last input, set recording = false
+        // clear buffers as needed
+
+        // otherwise, recording = true
+        // update hz measurement(s)
+        // update tap count
+        // update probability buffers???
+
+        // write hz sprites
+        // write tap count sprite
+        // write probability sprites
         nmi
 
 chrrom
-    file(fmt, "chr/hud.png")
-    file(fmt, "chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
