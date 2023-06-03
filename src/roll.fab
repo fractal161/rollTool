@@ -1,0 +1,81 @@
+charmap("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-,`>/()\".:·")
+// []
+
+vars /game_vars
+    CCC/levels level_ptr
+
+data /backgrounds
+    [] bg
+        ("································"
+         "································"
+         "·····HELLO·WORLD················"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································"
+         "································")
+
+fn load_bg()
+    // Tell the NES which VRAM address we want to upload to:
+    ppu_reset_addr($2000)
+
+    // Upload the tile data:
+    for UU i = 0; i < 960; i += 1
+        {PPUDATA}(@bg{i})
+
+    // Then the attributes:
+    for U i = 0; i < 64; i += 1
+        {PPUDATA}(%00000000)
+
+nmi main_nmi()
+    // Update OAM and poll the pads:
+    ppu_upload_oam_poll_pads(0)
+
+    // Turn on rendering:
+    {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
+
+    // Reset the scroll
+    ppu_reset_scroll(0, 0)
+
+mode main()
+: nmi main_nmi
+    // Set the palette:
+    palette = example_palette
+    ppu_upload_palette()
+
+    // Set and load the level:
+    load_bg()
+
+    // Tell the NES to trigger NMI once per frame:
+    {PPUCTRL}(PPUCTRL_NMI_ON)
+
+    // Wait forever, one frame at a time:
+    while true
+        update_pads()
+        nmi
+
+chrrom
+    file(fmt, "chr/hud.png")
+    file(fmt, "chr/hud.png")
