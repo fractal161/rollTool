@@ -4,4 +4,4 @@ roll.nes: src/*.fab chr/*.png
 run: roll.nes
 	mesen roll.nes
 clean:
-	rm roll.nes roll.cdl roll.cfg roll.mlb
+	rm roll.nes roll.mlb

@@ -1,20 +1,27 @@
-charmap("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ·.-*%⊏⊐")
+charmap("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ·.-*%⊏⊐⊑⊒[]_⎺")
 // []
 
-vars /game_vars
-    CCC/levels level_ptr
+vars /record_state
+    Bool recording = false
+    U grace = 0
+
+vars /hz
+    U [64] poll_buffer
+    U poll_buffer_index = 0
+    U poll_tile_index = 0
+    Bool last_poll_on = false
 
 data /backgrounds
     [] bg
         ("································"
-         "············00%·---------------·"
+         "································"
          "···00.00*·······················"
-         "············00%·---------------·"
+         "································"
          "···0·TAPS·······················"
-         "············00%·---------------·"
          "································"
-         "·⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐·"
-         "································"
+         "·______________________________·"
+         "[⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐]"
+         "·⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺·"
          "································"
          "································"
          "································"
@@ -51,6 +58,24 @@ fn load_bg()
 
     // do it all again for second nametable
 
+fn prepare_sprites()
+    U oam_index = 0
+    if recording
+        set_oam(oam_index, 4, 4, RECORD_SPRITE, %11)
+        oam_index += 4
+    // write hz sprites
+    // write tap count sprite
+    // write probability sprites
+    hide_oam(oam_index)
+
+fn clear_poll_vars()
+    for U i = 0; i < 32; i += 1
+        poll_buffer[i] = 0
+    poll_buffer_index = 0
+    poll_tile_index = 0
+    last_poll_on = false
+
+
 irq subframe_poll()
     // immediately schedule next irq
     // waste cycles for more accuracy??
@@ -60,10 +85,13 @@ irq subframe_poll()
 nmi main_nmi()
     // Update OAM and poll the pads: (TODO: measure timing)
     ppu_upload_oam_poll_pads(0)
+    if recording
+        poll_buffer_index += 2 // a frame is two tiles wide
+        poll_tile_index = 0
 
-    // update roll viz if needed (2 tiles)
-    // update frame row if needed (2 tiles, maybe 4)
-    // update probability buffers (45 tiles???)
+        // update poll tiles if needed (2 tiles)
+        // update frame row if needed (2 tiles, maybe 4)
+        // update probability buffers (45 tiles???)
 
     // set scroll to show current roll viz row
     ppu_reset_scroll(0, 0)
@@ -71,12 +99,13 @@ nmi main_nmi()
 mode main()
 : nmi main_nmi
     // Set the palette:
-    palette = example_palette
+    palette = START_PALETTE
     ppu_upload_palette()
 
     // Set and load the level:
     hide_oam(0)
     load_bg()
+    clear_poll_vars()
 
     // enable nmi, turn on rendering
     {PPUCTRL}(PPUCTRL_NMI_ON)
@@ -84,6 +113,28 @@ mode main()
 
     // Wait forever, one frame at a time:
     while true
+        update_pads()
+        Bool is_button_pressed = pads[0].held
+        if recording
+            // eventually this part will go in the irq
+            if is_button_pressed
+                U i = poll_buffer_index
+                poll_buffer[i] = 1
+                poll_buffer[i+1] = 1
+                grace = GRACE_PERIOD
+            if grace == 0
+                recording = false
+                clear_poll_vars()
+            else
+                grace -= 1
+        // starts recording, manually set start of buffer
+        else if is_button_pressed
+            recording = true
+            poll_buffer[0] = 1
+            poll_buffer[1] = 1
+            grace = GRACE_PERIOD
+            
+        // SUBFRAME LOOP
         // all computations here are done with the previous frame's inputs
         // i.e. only what's been completely finalized
 
@@ -95,9 +146,7 @@ mode main()
         // update tap count
         // update probability buffers???
 
-        // write hz sprites
-        // write tap count sprite
-        // write probability sprites
+        prepare_sprites()
         nmi
 
 chrrom
