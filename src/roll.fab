@@ -5,11 +5,16 @@ vars /record_state
     Bool recording = false
     U grace = 0
 
+vars /ppu
+    UU roll_viz_addr = $2460
+    U roll_viz_y = $17
+
 vars /hz
-    U [64] poll_buffer
+    U [POLL_BUFFER_SIZE] poll_buffer
     U poll_buffer_index = 0
     U poll_tile_index = 0
     Bool last_poll_on = false
+    Bool clear_offscreen = false
 
 data /backgrounds
     [] nt0
@@ -57,8 +62,8 @@ fn load_bg()
         {PPUDATA}(%00000000)
 
     // tiles for second nametable
-    //for UU i = 0; i < 960; i += 1
-    //    {PPUDATA}("SPACE TOKEN")
+    for UU i = 0; i < 960; i += 1
+        {PPUDATA}('·')
 
     // attributes for second nametable
     for U i = 0; i < 64; i += 1
@@ -75,8 +80,8 @@ fn prepare_sprites()
     hide_oam(oam_index)
 
 fn clear_poll_vars()
-    for U i = 0; i < 32; i += 1
-        poll_buffer[i] = 0
+    for U i = 0; i < POLL_BUFFER_SIZE; i += 1
+        poll_buffer[i] = '·'
     poll_buffer_index = 0
     poll_tile_index = 0
     last_poll_on = false
@@ -88,7 +93,7 @@ irq subframe_poll()
 : +static
     // acknowledge pending irq, then immediately schedule next irq (but not now)
     {MMC3_IRQ_DISABLE}(0)
-    ppu_set_mid_scroll(0, 7, 1)
+    ppu_set_mid_scroll(0, roll_viz_y, 1)
 
     // STUFF FOR LATER
     // waste cycles for more accuracy??
@@ -101,14 +106,33 @@ nmi main_nmi()
     // schedule irq for showing nt1
     mmc3_timer(72)
     if recording
+
         if poll_buffer_index < POLL_BUFFER_SIZE
+            // update poll tiles (2 tiles)
+            U i = poll_buffer_index
+            // update frame row if needed (2 tiles, maybe 4)
+            UU poll_addr = roll_viz_addr + UU(1 + i)
+            if i >= 30
+                poll_addr += 2
+            ppu_reset_addr(poll_addr)
+            {PPUDATA}(poll_buffer[i])
+            {PPUDATA}(poll_buffer[i+1])
+            
+            // update probability buffers (45 tiles???)
+
             poll_buffer_index += 2 // a frame is two tiles wide
             poll_tile_index = 0
-
-        // update poll tiles if needed (2 tiles)
-        // update frame row if needed (2 tiles, maybe 4)
-        // update probability buffers (45 tiles???)
-
+    else if clear_offscreen
+        // clear all in the topmost invisible buffer
+        UU clear_addr = roll_viz_addr + $2A0
+        if clear_addr >= $27C0
+            clear_addr -= $3C0
+        fence
+        ppu_reset_addr(clear_addr)
+        for U i = 0; i < 64; i += 1
+            {PPUDATA}('·')
+        fence
+        clear_offscreen = false
     // set scroll to show current roll viz row
     ppu_reset_mid_scroll(0, 0, 0)
 
@@ -144,18 +168,31 @@ mode main()
                 if i < POLL_BUFFER_SIZE
                     poll_buffer[i] = $FF
                     poll_buffer[i+1] = $FF
+                else
+                    poll_buffer[i] = '·'
+                    poll_buffer[i+1] = '·'
                 grace = GRACE_PERIOD
             if grace == 0
                 recording = false
                 clear_poll_vars()
+                clear_offscreen = true
             else
                 grace -= 1
+            last_poll_on = is_button_pressed
         // starts recording, manually set start of buffer
         else if is_button_pressed
             recording = true
             poll_buffer[0] = $FF
             poll_buffer[1] = $FF
             grace = GRACE_PERIOD
+            // scroll up to push existing entries down
+            roll_viz_addr -= $60
+            if roll_viz_addr < $2400
+                roll_viz_addr += $3C0
+            if roll_viz_y < $18
+                roll_viz_y += $D8 // mod 240
+            else
+                roll_viz_y -= $18
             
         // SUBFRAME LOOP
         // all computations here are done with the previous frame's inputs

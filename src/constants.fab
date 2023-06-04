@@ -1,4 +1,4 @@
-ct U POLL_BUFFER_SIZE = 64
+ct U POLL_BUFFER_SIZE = 60
 // number of frames beyond last input until recording stops
 ct U GRACE_PERIOD = 8
 
