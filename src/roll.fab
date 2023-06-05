@@ -1,9 +1,8 @@
 charmap("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ·.-*%⊏⊐⊑⊒[]_⎺")
-// []
 
 vars /record_state
     Bool recording = false
-    U grace = 0
+    U cooldown = 0
 
 vars /ppu
     UU roll_viz_addr = $2460
@@ -11,19 +10,22 @@ vars /ppu
 
 vars /hz
     U [POLL_BUFFER_SIZE] poll_buffer
-    U poll_buffer_index = 0
+    UU poll_buffer_index = 0 // so we can track speed well beyond the screen
     U poll_tile_index = 0
     Bool last_poll_on = false
     Bool clear_offscreen = false
+    U tap_count = 0
+    U last_start_index = 0
+    U[4] hz_digits = U[4](0, 0, 0, 0)
 
 data /backgrounds
     [] nt0
         ("································"
+         "·····.··*·······················"
          "································"
-         "···00.00*·······················"
+         "·····TAPS·······················"
          "································"
-         "···0·TAPS·······················"
-         "································"
+         "·····FRAMES·····················"
          "·______________________________·"
          "[⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐]"
          "·⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺·"
@@ -72,20 +74,34 @@ fn load_bg()
 fn prepare_sprites()
     U oam_index = 0
     if recording
-        set_oam(oam_index, 4, 4, RECORD_SPRITE, %11)
+        set_oam(oam_index, 4, 3, RECORD_SPRITE, %11)
         oam_index += 4
     // write hz sprites
+    set_oam(oam_index, 24, 7, hz_digits[3], %00)
+    oam_index += 4
+    set_oam(oam_index, 32, 7, hz_digits[2], %00)
+    oam_index += 4
+    set_oam(oam_index, 48, 7, hz_digits[1], %00)
+    oam_index += 4
+    set_oam(oam_index, 56, 7, hz_digits[0], %00)
+    oam_index += 4
     // write tap count sprite
+    set_oam(oam_index, 24, 23, tap_count, %11)
+    oam_index += 4
+    // TEMP: write frame count
+    U[2] frame_count = u_to_dd(last_start_index + 1)
+    set_oam(oam_index, 16, 39, frame_count[1], %11)
+    oam_index += 4
+    set_oam(oam_index, 24, 39, frame_count[0], %11)
+    oam_index += 4
     // write probability sprites
     hide_oam(oam_index)
 
-fn clear_poll_vars()
+fn clear_vars_after_cooldown()
     for U i = 0; i < POLL_BUFFER_SIZE; i += 1
         poll_buffer[i] = '·'
     poll_buffer_index = 0
     poll_tile_index = 0
-    last_poll_on = false
-
 
 // this is kinda slow because of bank switches! TODO: optimize out somehow
 // for scroll, hopefully does not matter
@@ -106,10 +122,9 @@ nmi main_nmi()
     // schedule irq for showing nt1
     mmc3_timer(72)
     if recording
-
-        if poll_buffer_index < POLL_BUFFER_SIZE
+        if poll_buffer_index < UU(POLL_BUFFER_SIZE)
             // update poll tiles (2 tiles)
-            U i = poll_buffer_index
+            U i = poll_buffer_index.a
             // update frame row if needed (2 tiles, maybe 4)
             UU poll_addr = roll_viz_addr + UU(1 + i)
             if i >= 30
@@ -120,8 +135,8 @@ nmi main_nmi()
             
             // update probability buffers (45 tiles???)
 
-            poll_buffer_index += 2 // a frame is two tiles wide
-            poll_tile_index = 0
+        poll_buffer_index += 2 // a frame is two tiles wide
+        poll_tile_index = 0
     else if clear_offscreen
         // clear all in the topmost invisible buffer
         UU clear_addr = roll_viz_addr + $2A0
@@ -146,7 +161,7 @@ mode main()
     // set and load the level:
     hide_oam(0)
     load_bg()
-    clear_poll_vars()
+    clear_vars_after_cooldown()
 
     // swap sprite banks (necessary for scanline counter to work)
 
@@ -164,27 +179,40 @@ mode main()
         if recording
             // eventually this part will go in the irq
             if is_button_pressed
-                U i = poll_buffer_index
-                if i < POLL_BUFFER_SIZE
+                U i = poll_buffer_index.a
+                if poll_buffer_index < UU(POLL_BUFFER_SIZE)
                     poll_buffer[i] = $FF
                     poll_buffer[i+1] = $FF
-                else
+                cooldown = COOLDOWN_THRESHOLD
+                if !last_poll_on
+                    // update hz measurement
+                    tap_count += 1
+                    last_start_index = i >> 1
+                    if tap_count > 0
+                        UUU hz_dividend = NTSC_FRAMERATE * (tap_count - 1)
+                        UUU hz = udiv_24(hz_dividend, last_start_index)
+                        hz_digits = U[4](uu_to_ddddd(UU(hz)))
+            else
+                U i = poll_buffer_index.a
+                if poll_buffer_index < UU(POLL_BUFFER_SIZE)
                     poll_buffer[i] = '·'
                     poll_buffer[i+1] = '·'
-                grace = GRACE_PERIOD
-            if grace == 0
+            if cooldown == 0
                 recording = false
-                clear_poll_vars()
+                clear_vars_after_cooldown()
                 clear_offscreen = true
             else
-                grace -= 1
+                cooldown -= 1
             last_poll_on = is_button_pressed
         // starts recording, manually set start of buffer
         else if is_button_pressed
             recording = true
+            tap_count = 1
             poll_buffer[0] = $FF
             poll_buffer[1] = $FF
-            grace = GRACE_PERIOD
+            cooldown = COOLDOWN_THRESHOLD
+            last_poll_on = true
+            last_start_index = 0
             // scroll up to push existing entries down
             roll_viz_addr -= $60
             if roll_viz_addr < $2400
