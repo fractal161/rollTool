@@ -1,6 +1,39 @@
 ct UU NTSC_FRAMERATE = $177A
 ct UU PAL_FRAMERATE = $1389
 
+// HOW THIS WORKS
+// - currently, first poll happens at scanline 246, cycle 70-ish
+// - this should only affect the first interval since all others
+//   are relative
+// - first element is for nmi, a value of n means the irq
+//   happens at scanline n-1, cycle 290-ish
+// - in general, i'm pretty sure that the number written is like
+//   one more than what's actually counted (this will been tested)
+// - also, nesfab takes a scanline to actually schedule the next one, so
+//   we subtract another 1
+// - last one is extra long because we don't want it to actually work
+// - Current measurements: 0, 16, 32, 49, 65, 81, 98, 114, 130, 137, 163, 179
+// - 196, 212, 228
+data /scanline
+    [] scanline_intervals
+        U(1)
+        U(15)
+        U(15)
+        U(16)
+        U(15)
+        U(15)
+        U(16)
+        U(15)
+        U(15)
+        U(16)
+        U(15)
+        U(15)
+        U(16)
+        U(15)
+        U(15)
+        U(20)
+
+
 ct U POLL_BUFFER_SIZE = 60
 // number of frames beyond last input until recording stops
 ct U COOLDOWN_THRESHOLD = 8
