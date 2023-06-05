@@ -97,11 +97,12 @@ fn prepare_sprites()
     // write probability sprites
     hide_oam(oam_index)
 
+// be careful!! this will probably be called before the last irq, so
+// don't mutate state
 fn clear_vars_after_cooldown()
     for U i = 0; i < POLL_BUFFER_SIZE; i += 1
         poll_buffer[i] = '·'
     poll_buffer_index = 0
-    poll_index = 0
 
 // this is kinda slow because of bank switches! TODO: optimize out somehow
 // for scroll, hopefully does not matter
