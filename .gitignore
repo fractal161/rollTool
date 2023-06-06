@@ -1,5 +1,6 @@
 nesfab/
 info/
+release/
 *.cdl
 *.ram.nl
 *.nes
