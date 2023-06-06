@@ -15,7 +15,7 @@ vars /hz
     Bool last_poll_on = false
     Bool clear_offscreen = false
     U tap_count = 0
-    U last_start_index = 0
+    UU last_start_index = 0
     U[4] hz_digits = U[4](0, 0, 0, 0)
 
 data /backgrounds
@@ -89,7 +89,7 @@ fn prepare_sprites()
     set_oam(oam_index, 24, 23, tap_count, %11)
     oam_index += 4
     // TEMP: write frame count
-    U[2] frame_count = u_to_dd(last_start_index + 1)
+    U[2] frame_count = U[2](uu_to_ddddd(last_start_index + 1))
     set_oam(oam_index, 16, 39, frame_count[1], %11)
     oam_index += 4
     set_oam(oam_index, 24, 39, frame_count[0], %11)
@@ -191,10 +191,11 @@ mode main()
                 if !last_poll_on
                     // update hz measurement
                     tap_count += 1
-                    last_start_index = i >> 1
-                    if tap_count > 0
+                    last_start_index = poll_buffer_index >> 1
+                    if tap_count > 0 && tap_count != $FF
                         UUU hz_dividend = NTSC_FRAMERATE * (tap_count - 1)
                         UUU hz = udiv_24(hz_dividend, last_start_index)
+                        // TODO: this can probably go above 100
                         hz_digits = U[4](uu_to_ddddd(UU(hz)))
             else
                 U i = poll_buffer_index.a
