@@ -33,6 +33,16 @@ data /scanline
         U(15)
         U(20)
 
+data /flags
+    [] powers_of_two
+        U(1)
+        U(2)
+        U(4)
+        U(8)
+        U(16)
+        U(32)
+        U(64)
+        U(128)
 
 ct U POLL_BUFFER_SIZE = 60
 // number of frames beyond last input until recording stops

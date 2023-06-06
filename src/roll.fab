@@ -2,6 +2,7 @@ charmap("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ·.-*%⊏⊐⊑⊒[]_⎺")
 
 vars /record_state
     Bool recording = false
+    Bool last_recording = false
     U cooldown = 0
 
 vars /ppu
@@ -11,11 +12,17 @@ vars /ppu
 vars /hz
     U [POLL_BUFFER_SIZE] poll_buffer
     UU poll_buffer_index = 0 // so we can track speed well beyond the screen
-    U poll_index = 0
-    Bool last_poll_on = false
+    U subframe_index = 0
+    Bool prev_poll_on = false
     Bool clear_offscreen = false
+
     U tap_count = 0
-    UU last_start_index = 0
+    UU start_index = 0
+    UU end_index = 0
+
+    U last_tap_count = 0
+    UU last_end_index = 0
+
     U[4] hz_digits = U[4](0, 0, 0, 0)
 
 data /backgrounds
@@ -65,7 +72,7 @@ fn load_bg()
 
     // tiles for second nametable
     for UU i = 0; i < 960; i += 1
-        {PPUDATA}('·')
+        {PPUDATA}(0)
 
     // attributes for second nametable
     for U i = 0; i < 64; i += 1
@@ -88,45 +95,97 @@ fn prepare_sprites()
     // write tap count sprite
     set_oam(oam_index, 24, 23, tap_count, %11)
     oam_index += 4
-    // TEMP: write frame count
-    U[2] frame_count = U[2](uu_to_ddddd(last_start_index + 1))
-    set_oam(oam_index, 16, 39, frame_count[1], %11)
-    oam_index += 4
-    set_oam(oam_index, 24, 39, frame_count[0], %11)
-    oam_index += 4
-    // write probability sprites
+    // TODO: write probability sprites
     hide_oam(oam_index)
 
 // be careful!! this will probably be called before the last irq, so
 // don't mutate state
 fn clear_vars_after_cooldown()
     for U i = 0; i < POLL_BUFFER_SIZE; i += 1
-        poll_buffer[i] = '·'
+        poll_buffer[i] = 0
     poll_buffer_index = 0
+    prev_poll_on = false
 
+fn update_poll_buffer()
+    U i = poll_buffer_index.a
+    if subframe_index >= 8
+        i += 1
+    poll_buffer[i] |= @powers_of_two[subframe_index & %111]
+
+fn handle_poll()
+    fence
+    Bool is_button_pressed = pads[0].held & (BUTTON_LEFT | BUTTON_RIGHT)
+    if !recording && is_button_pressed
+        recording = true
+        tap_count = 0
+        start_index = subframe_index
+        end_index = subframe_index
+        shift_nt1()
+    fence
+    if recording && is_button_pressed 
+        if poll_buffer_index < UU(POLL_BUFFER_SIZE)
+            update_poll_buffer()
+            cooldown = COOLDOWN_THRESHOLD
+        if !prev_poll_on
+            tap_count += 1
+            end_index = UU(poll_buffer_index << 3) + UU(subframe_index)
+    fence
+    prev_poll_on = is_button_pressed
+
+fn shift_nt1()
+    // scroll up to push existing entries down
+    roll_viz_addr -= $60
+    if roll_viz_addr < $2400
+        roll_viz_addr += $3C0
+    if roll_viz_y < $18
+        roll_viz_y += $D8 // mod 240
+    else
+        roll_viz_y -= $18
+
+fn swap_first_chr_set(U bank)
+: +inline
+    fence
+    {MMC3_BANK_SELECT}(%00000000)
+    {MMC3_BANK_DATA}(bank << 2)
+    {MMC3_BANK_SELECT}(%00000001)
+    {MMC3_BANK_DATA}((bank << 2) + 2)
+    fence
+
+asm fn wait_for_last_poll()
+: employs /hz
+    default
+    label loop
+        lda &subframe_index
+        cmp #$10
+        bne loop
+        rts
 // this is kinda slow because of bank switches! TODO: optimize out somehow
 // for scroll, hopefully does not matter
 irq subframe_poll()
     // acknowledge pending irq, then immediately schedule next irq (but not now)
     // already disables so this is safe
-    mmc3_timer(@scanline_intervals[poll_index])
-    if poll_index == 5
+    mmc3_timer(@scanline_intervals[subframe_index])
+    // set scroll/change chr bank at specific index
+    if subframe_index == 5
         ppu_set_mid_scroll(0, roll_viz_y, 1)
-    poll_index += 1
-
-    // STUFF FOR LATER
-    // set scroll at specific index
-    // waste cycles for more accuracy??
-    // poll controller
-    // if L/R, update active buffer with next tile
+        swap_first_chr_set(2)
+    // poll controller (TODO: waste cycles for more accuracy??)
+    poll_pads()
+    update_pads()
+    fence
+    // if recording and L/R pressed, update active buffer with next tile
+    handle_poll()
+    subframe_index += 1
 
 nmi main_nmi()
     // Update OAM and poll the pads (currently scanline 246, cycle 90)
     ppu_upload_oam_poll_pads(0)
     update_pads()
+    fence
     // schedule irq for showing nt1
     mmc3_timer(@scanline_intervals[0])
-    poll_index = 1
+    // make background bank normal
+    swap_first_chr_set(0)
     if recording
         if poll_buffer_index < UU(POLL_BUFFER_SIZE)
             // update poll tiles (2 tiles)
@@ -144,15 +203,21 @@ nmi main_nmi()
         poll_buffer_index += 2 // a frame is two tiles wide
     else if clear_offscreen
         // clear all in the topmost invisible buffer
-        UU clear_addr = roll_viz_addr + $2A0
+        UU clear_addr = roll_viz_addr + $2A1
         if clear_addr >= $27C0
             clear_addr -= $3C0
         fence
         ppu_reset_addr(clear_addr)
-        for U i = 0; i < 64; i += 1
-            {PPUDATA}('·')
+        for U i = 0; i < 62; i += 1
+            {PPUDATA}(0)
         fence
         clear_offscreen = false
+    // "irq 0"
+    subframe_index = 0
+    fence
+    handle_poll()
+    fence
+    subframe_index = 1 // MUST HAPPEN BEFORE END OF VBLANK
     // set scroll to show current roll viz row
     ppu_reset_mid_scroll(0, 0, 0)
 
@@ -179,70 +244,97 @@ mode main()
 
     // Wait forever, one frame at a time:
     while true
-        Bool is_button_pressed = pads[0].held
-        if recording
-            // eventually this part will go in the irq
-            if is_button_pressed
-                U i = poll_buffer_index.a
-                if poll_buffer_index < UU(POLL_BUFFER_SIZE)
-                    poll_buffer[i] = $FF
-                    poll_buffer[i+1] = $FF
-                cooldown = COOLDOWN_THRESHOLD
-                if !last_poll_on
-                    // update hz measurement
-                    tap_count += 1
-                    last_start_index = poll_buffer_index >> 1
-                    if tap_count > 0 && tap_count != $FF
-                        UUU hz_dividend = NTSC_FRAMERATE * (tap_count - 1)
-                        UUU hz = udiv_24(hz_dividend, last_start_index)
-                        // TODO: this can probably go above 100
-                        hz_digits = U[4](uu_to_ddddd(UU(hz)))
-            else
-                U i = poll_buffer_index.a
-                if poll_buffer_index < UU(POLL_BUFFER_SIZE)
-                    poll_buffer[i] = '·'
-                    poll_buffer[i+1] = '·'
+        if last_recording
+            // use `last_` variables for all of these
+            // update hz measurement(s)
+            if last_tap_count > 1 && last_tap_count != $FF
+                // should always fit
+                UUU hz_dividend = (NTSC_FRAMERATE * (last_tap_count - 1)) << 3
+                UU interval = last_end_index - start_index
+                UUU hz = udiv_24(hz_dividend, interval) << 1
+                // TODO: this can probably go above 100
+                hz_digits = U[4](uu_to_ddddd(UU(hz)))
+            // update probability buffers???
+        prepare_sprites()
+        // wait for all polls to finish up
+        fence
+        wait_for_last_poll()
+        fence
+        if last_recording
             if cooldown == 0
                 recording = false
+                last_recording = false
                 clear_vars_after_cooldown()
                 clear_offscreen = true
             else
                 cooldown -= 1
-            last_poll_on = is_button_pressed
-        // starts recording, manually set start of buffer
-        else if is_button_pressed
-            recording = true
-            tap_count = 1
-            poll_buffer[0] = $FF
-            poll_buffer[1] = $FF
-            cooldown = COOLDOWN_THRESHOLD
-            last_poll_on = true
-            last_start_index = 0
-            // scroll up to push existing entries down
-            roll_viz_addr -= $60
-            if roll_viz_addr < $2400
-                roll_viz_addr += $3C0
-            if roll_viz_y < $18
-                roll_viz_y += $D8 // mod 240
-            else
-                roll_viz_y -= $18
-            
-        // SUBFRAME LOOP
-        // all computations here are done with the previous frame's inputs
-        // i.e. only what's been completely finalized
-
-        // if x frames since last input, set recording = false
-        // clear buffers as needed
-
-        // otherwise, recording = true
-        // update hz measurement(s)
-        // update tap count
-        // update probability buffers???
-
-        prepare_sprites()
+                last_tap_count = tap_count
+                last_end_index = end_index
+        last_recording = recording
         nmi
 
 chrrom
     file(fmt, "../chr/hud.png")
     file(fmt, "../chr/hud.png")
     file(fmt, "../chr/hz.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
+    file(fmt, "../chr/hud.png")
