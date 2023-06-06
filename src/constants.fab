@@ -44,6 +44,11 @@ data /flags
         U(64)
         U(128)
 
+// how many input display rows
+ct U NUM_VISIBLE_ROWS = 6
+// height in tiles
+ct U ROW_HEIGHT = 3
+
 ct U POLL_BUFFER_SIZE = 60
 // number of frames beyond last input until recording stops
 ct U COOLDOWN_THRESHOLD = 8

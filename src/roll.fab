@@ -28,6 +28,8 @@ vars /hz
 data /backgrounds
     [] nt0
         ("································"
+         "································"
+         "································"
          "·····.··*·······················"
          "································"
          "·····TAPS·······················"
@@ -36,8 +38,6 @@ data /backgrounds
          "·______________________________·"
          "[⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐]"
          "·⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺·"
-         "································"
-         "································"
          "································"
          "································"
          "································"
@@ -81,25 +81,23 @@ fn load_bg()
 fn prepare_sprites()
     U oam_index = 0
     if recording
-        set_oam(oam_index, 4, 3, RECORD_SPRITE, %11)
+        set_oam(oam_index, 12, 19, RECORD_SPRITE, %11)
         oam_index += 4
     // write hz sprites
-    set_oam(oam_index, 24, 7, hz_digits[3], %00)
+    set_oam(oam_index, 24, 23, hz_digits[3], %00)
     oam_index += 4
-    set_oam(oam_index, 32, 7, hz_digits[2], %00)
+    set_oam(oam_index, 32, 23, hz_digits[2], %00)
     oam_index += 4
-    set_oam(oam_index, 48, 7, hz_digits[1], %00)
+    set_oam(oam_index, 48, 23, hz_digits[1], %00)
     oam_index += 4
-    set_oam(oam_index, 56, 7, hz_digits[0], %00)
+    set_oam(oam_index, 56, 23, hz_digits[0], %00)
     oam_index += 4
     // write tap count sprite
-    set_oam(oam_index, 24, 23, tap_count, %11)
+    set_oam(oam_index, 24, 39, tap_count, %11)
     oam_index += 4
     // TODO: write probability sprites
     hide_oam(oam_index)
 
-// be careful!! this will probably be called before the last irq, so
-// don't mutate state
 fn clear_vars_after_cooldown()
     for U i = 0; i < POLL_BUFFER_SIZE; i += 1
         poll_buffer[i] = 0
@@ -107,40 +105,43 @@ fn clear_vars_after_cooldown()
     prev_poll_on = false
 
 fn update_poll_buffer()
-    U i = poll_buffer_index.a
-    if subframe_index >= 8
-        i += 1
+    U i = poll_buffer_index.a + (subframe_index >> 3)
     poll_buffer[i] |= @powers_of_two[subframe_index & %111]
 
 fn handle_poll()
     fence
     Bool is_button_pressed = pads[0].held & (BUTTON_LEFT | BUTTON_RIGHT)
-    if !recording && is_button_pressed
-        recording = true
-        tap_count = 0
-        start_index = subframe_index
-        end_index = subframe_index
-        shift_nt1()
-    fence
-    if recording && is_button_pressed 
+    if is_button_pressed
+        cooldown = COOLDOWN_THRESHOLD
+        if !recording
+            // special logic if recording begins with the nmi poll
+            // done so the first poll which would be recognized by the
+            // actual game lines up in all cases
+            if subframe_index == 0
+                poll_buffer_index = 2
+            recording = true
+            tap_count = 0
+            start_index = (poll_buffer_index << 3) + UU(subframe_index)
+            end_index = (poll_buffer_index << 3) + UU(subframe_index)
+            shift_nt1()
+        fence
         if poll_buffer_index < UU(POLL_BUFFER_SIZE)
             update_poll_buffer()
-            cooldown = COOLDOWN_THRESHOLD
         if !prev_poll_on
             tap_count += 1
-            end_index = UU(poll_buffer_index << 3) + UU(subframe_index)
+            end_index = (poll_buffer_index << 3) + UU(subframe_index)
     fence
     prev_poll_on = is_button_pressed
 
 fn shift_nt1()
     // scroll up to push existing entries down
-    roll_viz_addr -= $60
+    roll_viz_addr -= $20 * ROW_HEIGHT
     if roll_viz_addr < $2400
         roll_viz_addr += $3C0
-    if roll_viz_y < $18
-        roll_viz_y += $D8 // mod 240
+    if roll_viz_y < (ROW_HEIGHT << 3)
+        roll_viz_y += ($F0 - (ROW_HEIGHT << 3)) // mod 240
     else
-        roll_viz_y -= $18
+        roll_viz_y -= (ROW_HEIGHT << 3)
 
 fn swap_first_chr_set(U bank)
 : +inline
@@ -166,7 +167,7 @@ irq subframe_poll()
     // already disables so this is safe
     mmc3_timer(@scanline_intervals[subframe_index])
     // set scroll/change chr bank at specific index
-    if subframe_index == 5
+    if subframe_index == 6
         ppu_set_mid_scroll(0, roll_viz_y, 1)
         swap_first_chr_set(2)
     // poll controller (TODO: waste cycles for more accuracy??)
@@ -203,9 +204,10 @@ nmi main_nmi()
         poll_buffer_index += 2 // a frame is two tiles wide
     else if clear_offscreen
         // clear all in the topmost invisible buffer
-        UU clear_addr = roll_viz_addr + $2A1
-        if clear_addr >= $27C0
-            clear_addr -= $3C0
+        // TODO: tune if necessary
+        UU clear_addr = roll_viz_addr - UU($20 * ROW_HEIGHT)
+        if clear_addr < $2400
+            clear_addr += $3C0
         fence
         ppu_reset_addr(clear_addr)
         for U i = 0; i < 62; i += 1
