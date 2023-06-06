@@ -1,0 +1,8 @@
+ - each irq seems to take around 5 scanlines, which was the case for both
+   unpressed and pressed
+ - nmi poll happens at around scanline 246
+ - nmi exits at around 251
+ - rn math seems to finish at like scanline 30?, probably 2 irqs before that so most likely 30ish scanlines for the stuff before busyloop
+ - sprite staging is like 10 scanlines?
+
+ - with all of the above, a total of 5*15 + 20 + 10 = 95 scanlines used, so maybe like 160 left? that's enough for 8 computations
