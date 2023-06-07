@@ -14,6 +14,7 @@ vars /hz
     UU poll_buffer_index = 0 // so we can track speed well beyond the screen
     U subframe_index = 0
     Bool prev_poll_on = false
+    Bool prev_nmi_poll_on = false
     Bool clear_offscreen = false
 
     U tap_count = 0
@@ -112,6 +113,7 @@ fn clear_vars_after_cooldown()
         poll_buffer[i] = 0
     poll_buffer_index = 0
     prev_poll_on = false
+    prev_nmi_poll_on = false
 
 fn update_poll_buffer()
     U i = poll_buffer_index.a + (subframe_index >> 3)
@@ -140,7 +142,13 @@ fn handle_poll()
             tap_count += 1
             end_index = (poll_buffer_index << 3) + UU(subframe_index)
     fence
+    // TODO: can be moved when buffer is refactored
+    if subframe_index == 0 
+        if !prev_nmi_poll_on && is_button_pressed
+            play_sfx = true
+        prev_nmi_poll_on = is_button_pressed
     prev_poll_on = is_button_pressed
+
 
 fn shift_nt1()
     // scroll up to push existing entries down
@@ -225,7 +233,7 @@ nmi main_nmi()
             {PPUDATA}(poll_buffer[i+1])
             // update frame row if needed
             ppu_reset_addr(frame_row_addr)
-            if poll_buffer[i] & $80 != 0
+            if poll_buffer[i] & $01 != 0
                 {PPUDATA}('⊑')
                 {PPUDATA}('⊒')
 
@@ -289,6 +297,8 @@ mode main()
                 hz_digits = U[4](uu_to_ddddd(UU(hz)))
             // update probability buffers???
         prepare_sprites()
+        // probably ok here since we're only checking polls at nmi (for now)
+        update_audio()
         // wait for all polls to finish up
         fence
         wait_for_last_poll()
