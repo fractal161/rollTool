@@ -11,7 +11,7 @@ for i in range(256):
     for j in range(8):
         bit = i & (1 << j)
         if bit > 0:
-            tileset[8*row:8*(row+1),8*col+j] = (0x55, 0x55, 0x55)
+            tileset[8*row:8*(row+1)-1,8*col+j] = (0x55, 0x55, 0x55)
 
 
 

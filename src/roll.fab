@@ -7,7 +7,7 @@ vars /record_state
 
 vars /ppu
     UU roll_viz_addr = $2460
-    U roll_viz_y = $12
+    U roll_viz_y = $14
 
 vars /hz
     U [POLL_BUFFER_SIZE] poll_buffer
@@ -35,9 +35,9 @@ data /backgrounds
          "·····TAPS·······················"
          "································"
          "·····FRAMES·····················"
-         "·______________________________·"
-         "[⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐]"
-         "·⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺·"
+         "································"
+         "·⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐·"
+         "·⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐⊏⊐·"
          "································"
          "································"
          "································"
@@ -57,7 +57,16 @@ data /backgrounds
          "································"
          "································"
          "································")
-
+ct U[64] attr1 = U[64](
+    $00, $00, $00, $00, $00, $00, $00, $00, 
+    $00, $00, $00, $00, $00, $00, $00, $00, 
+    $55, $55, $55, $55, $55, $55, $55, $55, 
+    $00, $00, $00, $00, $00, $00, $00, $00, 
+    $00, $00, $00, $00, $00, $00, $00, $00, 
+    $00, $00, $00, $00, $00, $00, $00, $00, 
+    $00, $00, $00, $00, $00, $00, $00, $00, 
+    $00, $00, $00, $00, $00, $00, $00, $00, 
+)
 fn load_bg()
     // Tell the NES which VRAM address we want to upload to:
     ppu_reset_addr($2000)
@@ -68,7 +77,7 @@ fn load_bg()
 
     // attributes for first nametable
     for U i = 0; i < 64; i += 1
-        {PPUDATA}(%00000000)
+        {PPUDATA}(attr1[i])
 
     // tiles for second nametable
     for UU i = 0; i < 960; i += 1
@@ -167,7 +176,7 @@ irq subframe_poll()
     // already disables so this is safe
     mmc3_timer(@scanline_intervals[subframe_index])
     // set scroll/change chr bank at specific index
-    if subframe_index == 6
+    if subframe_index == 7
         ppu_set_mid_scroll(0, roll_viz_y, 1)
         swap_chr_bank(0, 2)
     // poll controller (TODO: waste cycles for more accuracy??)
@@ -191,15 +200,34 @@ nmi main_nmi()
         if poll_buffer_index < UU(POLL_BUFFER_SIZE)
             // update poll tiles (2 tiles)
             U i = poll_buffer_index.a
-            // update frame row if needed (2 tiles, maybe 4)
+            // the first frame will never show up on the frameroll, so this is
+            // fine
+            if i == 2
+                // +2 is again because first frame always empty
+                ppu_reset_addr(FRAME_ROW_ADDR + 2)
+                // TODO: MAGIC NUMBER
+                for U j = 0; j < 14; j += 1
+                    {PPUDATA}('⊏')
+                    {PPUDATA}('⊐')
+                // two tiles of nothing
+                {PPUDATA}('·')
+                {PPUDATA}('·')
+                for U j = 0; j < 15; j += 1
+                    {PPUDATA}('⊏')
+                    {PPUDATA}('⊐')
             UU poll_addr = roll_viz_addr + UU(1 + i)
+            UU frame_row_addr = FRAME_ROW_ADDR + UU(i)
             if i >= 30
                 poll_addr += 2
+                frame_row_addr += 2
             ppu_reset_addr(poll_addr)
             {PPUDATA}(poll_buffer[i])
             {PPUDATA}(poll_buffer[i+1])
-            
-            // update probability buffers (45 tiles???)
+            // update frame row if needed
+            ppu_reset_addr(frame_row_addr)
+            if poll_buffer[i] & $80 != 0
+                {PPUDATA}('⊑')
+                {PPUDATA}('⊒')
 
         poll_buffer_index += 2 // a frame is two tiles wide
     else if clear_offscreen
@@ -241,6 +269,7 @@ mode main()
 
     // enable nmi, turn on rendering
     {PPUCTRL}(PPUCTRL_NMI_ON | PPUCTRL_SPR_PT_1000)
+    nmi
     {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
 
     // enable irqs
