@@ -8,6 +8,7 @@ vars /record_state
 vars /ppu
     UU roll_viz_addr = $2460
     U roll_viz_y = $14
+    U main_hz_color = $00
 
 vars /hz
     U [POLL_BUFFER_SIZE] poll_buffer
@@ -114,6 +115,7 @@ fn clear_vars_after_cooldown()
     poll_buffer_index = 0
     prev_poll_on = false
     prev_nmi_poll_on = false
+    last_tap_count = 1
 
 fn update_poll_buffer()
     U i = poll_buffer_index.a + (subframe_index >> 3)
@@ -204,6 +206,9 @@ nmi main_nmi()
     mmc3_timer(@scanline_intervals[0])
     // make background bank normal
     swap_chr_bank(0, 0)
+    // set sprite palettes
+    ppu_reset_addr($3F11)
+    {PPUDATA}(main_hz_color)
     if recording
         if poll_buffer_index < UU(POLL_BUFFER_SIZE)
             // update poll tiles (2 tiles)
@@ -292,7 +297,14 @@ mode main()
                 // should always fit
                 UUU hz_dividend = (NTSC_FRAMERATE * (last_tap_count - 1)) << 3
                 UU interval = last_end_index - start_index
+                fence
                 UUU hz = udiv_24(hz_dividend, interval) << 1
+                // use middle byte of hz for color
+                // U hz_color_index = hz.b
+                // main_hz_color = HZ_GRADIENT[hz_color_index]
+                fence
+                main_hz_color = HZ_GRADIENT[hz.b]
+                fence
                 // TODO: this can probably go above 100
                 hz_digits = U[4](uu_to_ddddd(UU(hz)))
             // update probability buffers???
