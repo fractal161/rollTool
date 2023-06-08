@@ -9,10 +9,12 @@ vars /ppu
     UU roll_viz_addr = $2460
     U roll_viz_y = $14
     U main_hz_color = $00
+    U waste_time = $00
 
 vars /hz
     U [POLL_BUFFER_SIZE] poll_buffer
     UU poll_buffer_index = 0 // so we can track speed well beyond the screen
+    UU hz = 0
     U subframe_index = 0
     Bool prev_poll_on = false
     Bool prev_nmi_poll_on = false
@@ -187,6 +189,9 @@ irq subframe_poll()
     mmc3_timer(@scanline_intervals[subframe_index])
     // set scroll/change chr bank at specific index
     if subframe_index == 7
+        fence
+        waste_time += 1
+        fence
         ppu_set_mid_scroll(0, roll_viz_y, 1)
         swap_chr_bank(0, 2)
     // poll controller (TODO: waste cycles for more accuracy??)
@@ -198,10 +203,7 @@ irq subframe_poll()
     subframe_index += 1
 
 nmi main_nmi()
-    // Update OAM and poll the pads (currently scanline 246, cycle 90)
-    ppu_upload_oam_poll_pads(0)
-    update_pads()
-    fence
+: employs /ppu
     // schedule irq for showing nt1
     mmc3_timer(@scanline_intervals[0])
     // make background bank normal
@@ -209,6 +211,10 @@ nmi main_nmi()
     // set sprite palettes
     ppu_reset_addr($3F11)
     {PPUDATA}(main_hz_color)
+    // Update OAM and poll the pads (currently scanline 246, cycle 90)
+    ppu_upload_oam_poll_pads(0)
+    update_pads()
+    fence
     if recording
         if poll_buffer_index < UU(POLL_BUFFER_SIZE)
             // update poll tiles (2 tiles)
@@ -251,7 +257,7 @@ nmi main_nmi()
             clear_addr += $3C0
         fence
         ppu_reset_addr(clear_addr)
-        for U i = 0; i < 62; i += 1
+        for U i = 0; i < 63; i += 1
             {PPUDATA}(0)
         fence
         clear_offscreen = false
@@ -298,13 +304,7 @@ mode main()
                 UUU hz_dividend = (NTSC_FRAMERATE * (last_tap_count - 1)) << 3
                 UU interval = last_end_index - start_index
                 fence
-                UUU hz = udiv_24(hz_dividend, interval) << 1
-                // use middle byte of hz for color
-                // U hz_color_index = hz.b
-                // main_hz_color = HZ_GRADIENT[hz_color_index]
-                fence
-                main_hz_color = HZ_GRADIENT[hz.b]
-                fence
+                hz = UU(udiv_24(hz_dividend, interval) << 1)
                 // TODO: this can probably go above 100
                 hz_digits = U[4](uu_to_ddddd(UU(hz)))
             // update probability buffers???
@@ -315,6 +315,9 @@ mode main()
         fence
         wait_for_last_poll()
         fence
+        // middle byte of hz for color
+        // in order for this to not be bugged it has to be here????????
+        main_hz_color = @hz_gradient[hz.b]
         if last_recording
             if cooldown == 0
                 recording = false

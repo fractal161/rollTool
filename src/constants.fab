@@ -16,7 +16,7 @@ ct UU PAL_FRAMERATE = $1389
 // - 196, 212, 228
 data /scanline
     [] scanline_intervals
-        U(1)
+        U(3) // this isn't great but timing is unstable without it so it stays
         U(15)
         U(15)
         U(16)
@@ -32,6 +32,24 @@ data /scanline
         U(15)
         U(15)
         U(20)
+    [] hz_gradient
+        U($16)
+        U($26)
+        U($27)
+        U($28)
+        U($29)
+        U($2A)
+        U($2C)
+        U($22)
+        U($23)
+        U($24)
+        U($14)
+        U($15)
+        // from gym
+        U($34)
+        U($33)
+        U($32)
+        U($31) // continuation beyond gym colors
 
 data /flags
     [] powers_of_two
