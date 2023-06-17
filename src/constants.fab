@@ -34,24 +34,6 @@ data /scanline
         U(15)
         U(15)
         U(20)
-    [] hz_gradient
-        U($16)
-        U($26)
-        U($27)
-        U($28)
-        U($29)
-        U($2A)
-        U($2C)
-        U($22)
-        U($23)
-        U($24)
-        U($14)
-        U($15)
-        // from gym
-        U($34)
-        U($33)
-        U($32)
-        U($31) // continuation beyond gym colors
 
 data /flags
     [] powers_of_two
@@ -96,6 +78,6 @@ ct U[25] START_PALETTE = U[25](
     $0F)
 
 ct U[] HZ_GRADIENT = U[](
-    $16, $26, $27, $28, $29, $2a, $2c, $22, $23, $24, $14, $15, // from gym
-    $34, $33, $32, $31, // continuation beyond gym colors
+    $16, $26, $27, $28, $29, $2A, $2C, $22, $23, $24, $14, $15, // from gym
+    $34, $33, $32, $31, $3A, $39, $38, // continuation beyond gym colors
 )
