@@ -1,0 +1,4 @@
+IMPROVEMENTS FOR LATER
+ - use bank swapping to remove expensive updates.
+   - e.g. for framerow, say we use color 1 for grey (inactive) and color 2 for green (active), and set color 3 to inactive as well. Then, with a bank swap, we can "switch" the color 2 and color 3 tiles, so all onscreen tiles look inactive. Replaces 62 PPUDATA writes with a couple of bank swaps, which saves maybe 2-2.5 scanlines?
+ - two options for roll length bar graph: either just delete the whole block or track the currently stored tiles and delete those

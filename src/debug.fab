@@ -1,0 +1,3 @@
+fn set_breakpoint(UU addr)
+    if DEBUG
+        {addr}($FF)
