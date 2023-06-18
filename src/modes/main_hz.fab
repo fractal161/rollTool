@@ -1,7 +1,7 @@
 /*
  * MAIN HZ
  * Contains measured hz meter and tap count
-*/
+ */
 
 vars /main_hz
     U[5] hz_digits = U[5](0, 0, 0, 0, 0)
@@ -53,7 +53,6 @@ fn main_hz_update_bg()
     {PPUDATA}(main_hz_color)
 
 fn set_hz_color(U i)
-    return // comment out to see allocation error
     if i < $0B
         main_hz_color = HZ_GRADIENT[i]
         return
