@@ -1,0 +1,33 @@
+/*
+ * EXAMPLE MODE
+ * Just a bunch of function signatures to show what might be expected.
+ *
+ * The convention is to prefix each one with the name of the component, but
+ * it doesn't really matter so long as all of the function names are distinct
+*/
+
+// state variables: some may be used across multiple states, but i would
+// prefer to avoid this just in case we don't want to reset state when
+// changing modes
+vars /example
+
+// updates the background for the current viz. assumes that it's already empty
+fn example_init_bg()
+
+// initializes all of the fields to their defaults.
+// is also called when the mode is entered (TODO: make this unnecessary?)
+fn example_reset_state()
+
+// updates the state of the mode. will typically make use of polls_last_frame
+fn example_update_state()
+
+// uses current state to determine what sprites to display on the next frame
+// returns the updated oam_index
+fn example_update_sprites(U oam_index) U
+
+// uses current state to determine what background tiles to update. must be
+// called from vblank
+fn example_update_bg()
+
+// restores the background to empty
+fn example_clean_bg()

@@ -81,3 +81,7 @@ ct U[] HZ_GRADIENT = U[](
     $16, $26, $27, $28, $29, $2A, $2C, $22, $23, $24, $14, $15, // from gym
     $34, $33, $32, $31, $3A, $39, $38, // continuation beyond gym colors
 )
+
+ct U[] HZ_THRESHOLDS = U[](
+    $0F, $13, $17, $1F, $27, $4E, $75
+)

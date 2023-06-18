@@ -11,10 +11,9 @@ vars /record_state
 vars /ppu
     UU roll_viz_addr = $2460
     U roll_viz_y = $14
-    U main_hz_color = $00
     U waste_time = $00
 
-vars /hz
+vars /roll
     U[2] polls_this_frame = U[2](0, 0)
     UU num_frames_recording = 0
     U subframe_index = 0
@@ -29,16 +28,14 @@ vars /hz
     U last_tap_count = 0
     UU last_end_index = 0
 
-    U[5] hz_digits = U[5](0, 0, 0, 0, 0)
-
 data /backgrounds
     [] nt0
         ("································"
          "································"
          "································"
-         "······.··*······················"
          "································"
-         "······TAPS······················"
+         "································"
+         "································"
          "································"
          "································"
          "································"
@@ -64,14 +61,14 @@ data /backgrounds
          "································"
          "································")
 ct U[64] attr1 = U[64](
-    $00, $00, $00, $00, $00, $00, $00, $00, 
-    $00, $00, $00, $00, $00, $00, $00, $00, 
-    $55, $55, $55, $55, $55, $55, $55, $55, 
-    $00, $00, $00, $00, $00, $00, $00, $00, 
-    $00, $00, $00, $00, $00, $00, $00, $00, 
-    $00, $00, $00, $00, $00, $00, $00, $00, 
-    $00, $00, $00, $00, $00, $00, $00, $00, 
-    $00, $00, $00, $00, $00, $00, $00, $00, 
+    $00, $00, $00, $00, $00, $00, $00, $00,
+    $00, $00, $00, $00, $00, $00, $00, $00,
+    $55, $55, $55, $55, $55, $55, $55, $55,
+    $00, $00, $00, $00, $00, $00, $00, $00,
+    $00, $00, $00, $00, $00, $00, $00, $00,
+    $00, $00, $00, $00, $00, $00, $00, $00,
+    $00, $00, $00, $00, $00, $00, $00, $00,
+    $00, $00, $00, $00, $00, $00, $00, $00,
 )
 fn load_bg()
     // Tell the NES which VRAM address we want to upload to:
@@ -93,26 +90,13 @@ fn load_bg()
     for U i = 0; i < 64; i += 1
         {PPUDATA}(%00000000)
 
-fn prepare_sprites()
+fn update_sprites()
     U oam_index = 0
     if recording
         set_oam(oam_index, 12, 19, RECORD_SPRITE, %11)
         oam_index += 4
     // write hz sprites
-    if hz_digits[4] != 0
-        set_oam(oam_index, 24, 23, hz_digits[4], %00)
-        oam_index += 4
-    set_oam(oam_index, 32, 23, hz_digits[3], %00)
-    oam_index += 4
-    set_oam(oam_index, 40, 23, hz_digits[2], %00)
-    oam_index += 4
-    set_oam(oam_index, 56, 23, hz_digits[1], %00)
-    oam_index += 4
-    set_oam(oam_index, 64, 23, hz_digits[0], %00)
-    oam_index += 4
-    // write tap count sprite
-    set_oam(oam_index, 32, 39, tap_count, %11)
-    oam_index += 4
+    oam_index = main_hz_update_sprites(oam_index)
     // TODO: write probability sprites
     hide_oam(oam_index)
 
@@ -143,7 +127,7 @@ fn handle_poll()
             tap_count = 0
             start_index = (num_frames_recording << 4) + UU(subframe_index)
             end_index = start_index
-            shift_nt1()
+            shift_nt1_offset()
         fence
         update_polls_this_frame()
         if !prev_poll_on
@@ -158,7 +142,7 @@ fn handle_poll()
     prev_poll_on = is_button_pressed
 
 
-fn shift_nt1()
+fn shift_nt1_offset()
     // scroll up to push existing entries down
     roll_viz_addr -= $20 * ROW_HEIGHT
     if roll_viz_addr < $2400
@@ -186,10 +170,8 @@ asm fn wait_for_last_poll()
         bne loop
         rts
 
-// for scroll, hopefully does not matter
 irq subframe_poll()
-    // acknowledge pending irq, then immediately schedule next irq (but not now)
-    // already disables so this is safe
+    // acknowledge pending irq, then immediately schedule next irq
     mmc3_timer(@scanline_intervals[subframe_index])
     // set scroll/change chr bank at specific index
     if subframe_index == 7
@@ -212,14 +194,12 @@ nmi main_nmi()
     mmc3_timer(@scanline_intervals[0])
     // make background bank normal
     swap_chr_bank(0, 0)
-    // set sprite palettes
-    ppu_reset_addr($3F11)
-    {PPUDATA}(main_hz_color)
     // Update OAM and poll the pads (currently scanline 246, cycle 90)
     ppu_upload_oam_poll_pads(0)
     update_pads()
     fence
     if recording
+        main_hz_update_bg()
         if num_frames_recording < UU(NUM_VISIBLE_FRAMES)
             // update frame row (2 tiles)
             U i = num_frames_recording.a << 1
@@ -282,34 +262,6 @@ nmi main_nmi()
     // set scroll to show current roll viz row
     ppu_reset_mid_scroll(0, 0, 0)
 
-fn set_hz_color(U i)
-    if i < $0B
-        main_hz_color = HZ_GRADIENT[i]
-    // around 30-40hz
-    else if i < $0F
-        main_hz_color = HZ_GRADIENT[11]
-    // 40-50
-    else if i < $13
-        main_hz_color = HZ_GRADIENT[12]
-    // 50-60
-    else if i < $17
-        main_hz_color = HZ_GRADIENT[13]
-    // 60-80
-    else if i < $1F
-        main_hz_color = HZ_GRADIENT[14]
-    // 80-100
-    else if i < $27
-        main_hz_color = HZ_GRADIENT[15]
-    // 100-200
-    else if i < $4E
-        main_hz_color = HZ_GRADIENT[16]
-    // 200-300
-    else if i < $75
-        main_hz_color = HZ_GRADIENT[17]
-    // 300-480
-    else
-        main_hz_color = HZ_GRADIENT[18]
-
 mode main()
 : nmi main_nmi
 : irq subframe_poll
@@ -320,6 +272,7 @@ mode main()
     // set and load the level:
     hide_oam(0)
     load_bg()
+    main_hz_init_bg()
     clear_vars_after_cooldown()
 
     //set mirroring
@@ -334,31 +287,21 @@ mode main()
     // enable irqs
     irq true
 
-    // Wait forever, one frame at a time:
+    // wait forever, one frame at a time:
     while true
         if last_recording
             // use `last_` variables for all of these
-            // update hz measurement(s)
-            if last_tap_count > 1 && last_tap_count != $FF
-                // should always fit
-                UUU hz_dividend = (NTSC_FRAMERATE * (last_tap_count - 1)) << 3
-                UU interval = last_end_index - start_index
-                fence
-                UU hz = UU(udiv_24(hz_dividend, interval) << 1)
-                // TODO: this can probably go above 100
-                hz_digits = U[5](uu_to_ddddd(UU(hz)))
-                // branch on high byte of hz to set color
-                set_hz_color(hz.b)
+            main_hz_update_state()
             // update probability buffers???
         else if pads[0].pressed & BUTTON_START
             // change mode here
             stat_mode += 1
-            if stat_mode == NUM_STAT_MODES
+            if stat_mode >= NUM_STAT_MODES
                 stat_mode = 0
             // schedule previous mode cleanup, new mode init
         else if pads[0].pressed & BUTTON_SELECT
-            // reset mode
-        prepare_sprites()
+            // reset stat mode
+        update_sprites()
         // probably ok here since we're only checking polls at nmi (for now)
         update_audio()
         // wait for all polls to finish up

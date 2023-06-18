@@ -1,0 +1,64 @@
+/*
+ * MAIN HZ
+ * Contains measured hz meter and tap count
+*/
+
+vars /main_hz
+    U[5] hz_digits = U[5](0, 0, 0, 0, 0)
+    U main_hz_color = $00
+
+fn main_hz_init_bg()
+    ppu_reset_addr($2066)
+    {PPUDATA}('.')
+    {PPUDATA}('·')
+    {PPUDATA}('·')
+    {PPUDATA}('*')
+    ppu_reset_addr($20A6)
+    {PPUDATA}('T')
+    {PPUDATA}('A')
+    {PPUDATA}('P')
+    {PPUDATA}('S')
+
+fn main_hz_update_state()
+    // big computation
+    if last_tap_count > 1 && last_tap_count != $FF
+        // should always fit
+        UUU hz_dividend = (NTSC_FRAMERATE * (last_tap_count - 1)) << 3
+        UU interval = last_end_index - start_index
+        fence
+        UU hz = UU(udiv_24(hz_dividend, interval) << 1)
+        hz_digits = U[5](uu_to_ddddd(UU(hz)))
+        // branch on high byte of hz to set color
+        set_hz_color(hz.b)
+
+fn main_hz_update_sprites(U oam_index) U
+    if hz_digits[4] != 0
+        set_oam(oam_index, 24, 23, hz_digits[4], %00)
+        oam_index += 4
+    set_oam(oam_index, 32, 23, hz_digits[3], %00)
+    oam_index += 4
+    set_oam(oam_index, 40, 23, hz_digits[2], %00)
+    oam_index += 4
+    set_oam(oam_index, 56, 23, hz_digits[1], %00)
+    oam_index += 4
+    set_oam(oam_index, 64, 23, hz_digits[0], %00)
+    oam_index += 4
+    // write tap count sprite
+    set_oam(oam_index, 32, 39, tap_count, %11)
+    oam_index += 4
+    return oam_index
+
+fn main_hz_update_bg()
+    ppu_reset_addr($3F11)
+    {PPUDATA}(main_hz_color)
+
+fn set_hz_color(U i)
+    return // comment out to see allocation error
+    if i < $0B
+        main_hz_color = HZ_GRADIENT[i]
+        return
+    for U j = 0; j < 7; j += 1
+        if i < HZ_THRESHOLDS[j]
+            main_hz_color = HZ_GRADIENT[j + 11]
+            return
+    main_hz_color = HZ_GRADIENT[18]
