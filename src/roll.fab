@@ -17,7 +17,7 @@ vars /ppu
 vars /roll
     UU polls_this_frame = 0
     UU polls_last_frame = 0
-    UU num_frames_recording = 0
+    UU frame_index = 0
     U subframe_index = 0
 
 ct U[64] attr1 = U[64](
@@ -70,9 +70,9 @@ fn handle_poll()
         // done so the first poll which would be recognized by the
         // actual game lines up in all cases
         if subframe_index == 0
-            num_frames_recording = 1
+            frame_index = 1
         else
-            num_frames_recording = 0
+            frame_index = 0
         recording = true
         
         main_hz_update_state_start()
@@ -129,7 +129,7 @@ nmi main_nmi()
         input_stream_update_bg_recording()
 
         polls_this_frame = 0
-        num_frames_recording += 1
+        frame_index += 1
 
     else if recording_just_finished
         input_stream_update_bg_stop()
@@ -155,6 +155,7 @@ mode main()
     load_bg()
     main_hz_init_bg()
     frame_row_init_bg()
+    length_stats_init_bg()
 
     //set mirroring
     {MMC3_MIRRORING}(0)
@@ -170,6 +171,15 @@ mode main()
     // wait forever, one frame at a time:
     while true
         if last_recording
+            // start by iterating through the polls of last frame
+            UU polls = polls_last_frame
+            for U i = 0; i < 16; i += 1
+                Bool poll = polls & UU(1)
+                main_hz_update_state_poll(i, poll)
+                prev_poll_on = poll
+                polls >>= 1
+
+            // then update any additional state
             main_hz_update_state_record()
         else if pads[0].pressed & BUTTON_START
             // change mode here

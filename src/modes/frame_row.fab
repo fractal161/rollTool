@@ -16,8 +16,8 @@ fn frame_row_init_bg()
         {PPUDATA}(@start_row[i])
 
 fn frame_row_update_bg()
-    if num_frames_recording < UU(NUM_VISIBLE_FRAMES)
-        U i = num_frames_recording.a << 1
+    if frame_index < UU(NUM_VISIBLE_FRAMES)
+        U i = frame_index.a << 1
         if i == 2
             ppu_reset_addr(FRAME_ROW_ADDR + 3)
             // TODO: MAGIC NUMBER
