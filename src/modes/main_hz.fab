@@ -5,7 +5,11 @@
 
 vars /main_hz
     U[5] hz_digits = U[5](0, 0, 0, 0, 0)
-    U main_hz_color = $00
+    U main_hz_color = $10
+    U tap_count = 0
+    UU start_index = 0
+    UU end_index = 0
+    Bool prev_poll_on = false
 
 fn main_hz_init_bg()
     ppu_reset_addr($2066)
@@ -18,13 +22,31 @@ fn main_hz_init_bg()
     {PPUDATA}('A')
     {PPUDATA}('P')
     {PPUDATA}('S')
+    ppu_reset_addr($3F11)
+    {PPUDATA}(main_hz_color)
 
-fn main_hz_update_state()
+fn main_hz_update_state_start()
+    tap_count = 0
+    start_index = (num_frames_recording << 4) + UU(subframe_index)
+    end_index = start_index
+
+fn main_hz_update_state_record()
+    // update vars by iterating through polls_last_frame
+    UU polls = polls_last_frame
+    for U i = 0; i < 16; i += 1
+        Bool poll = polls & UU(1)
+        if poll && !prev_poll_on
+            if tap_count < $FF
+                tap_count += 1
+            end_index = (num_frames_recording << 4) + UU(i) - 16
+        prev_poll_on = poll
+        polls >>= 1
+        
     // big computation
-    if last_tap_count > 1 && last_tap_count != $FF
+    if tap_count > 1 && tap_count < $FF
         // should always fit
-        UUU hz_dividend = (NTSC_FRAMERATE * (last_tap_count - 1)) << 3
-        UU interval = last_end_index - start_index
+        UUU hz_dividend = (NTSC_FRAMERATE * (tap_count - 1)) << 3
+        UU interval = end_index - start_index
         fence
         UU hz = UU(udiv_24(hz_dividend, interval) << 1)
         hz_digits = U[5](uu_to_ddddd(UU(hz)))
@@ -44,7 +66,7 @@ fn main_hz_update_sprites(U oam_index) U
     set_oam(oam_index, 64, 23, hz_digits[0], %00)
     oam_index += 4
     // write tap count sprite
-    set_oam(oam_index, 32, 39, tap_count, %11)
+    set_oam(oam_index, 32, 39, max(tap_count, 1), %11)
     oam_index += 4
     return oam_index
 

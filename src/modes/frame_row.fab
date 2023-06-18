@@ -1,6 +1,6 @@
 /*
  * FRAME ROW
- * 
+ * Shows the input sequence as if it were played on the original game.
  */
 
 vars /frame_row
@@ -16,23 +16,24 @@ fn frame_row_init_bg()
         {PPUDATA}(@start_row[i])
 
 fn frame_row_update_bg()
-    U i = num_frames_recording.a << 1
-    if i == 2
-        ppu_reset_addr(FRAME_ROW_ADDR + 3)
-        // TODO: MAGIC NUMBER
-        for U j = 0; j < 14; j += 1
-            {PPUDATA}('⊏')
-            {PPUDATA}('⊐')
-        // two tiles of nothing
-        {PPUDATA}('·')
-        {PPUDATA}('·')
-        for U j = 0; j < 15; j += 1
-            {PPUDATA}('⊏')
-            {PPUDATA}('⊐')
-    if polls_this_frame[0] & $01 != 0
-        UU frame_row_addr = FRAME_ROW_ADDR + UU(i) + 1
-        if i >= NUM_VISIBLE_FRAMES
-            frame_row_addr += 2
-        ppu_reset_addr(frame_row_addr)
-        {PPUDATA}('⊑')
-        {PPUDATA}('⊒')
+    if num_frames_recording < UU(NUM_VISIBLE_FRAMES)
+        U i = num_frames_recording.a << 1
+        if i == 2
+            ppu_reset_addr(FRAME_ROW_ADDR + 3)
+            // TODO: MAGIC NUMBER
+            for U j = 0; j < 14; j += 1
+                {PPUDATA}('⊏')
+                {PPUDATA}('⊐')
+            // two tiles of nothing
+            {PPUDATA}('·')
+            {PPUDATA}('·')
+            for U j = 0; j < 15; j += 1
+                {PPUDATA}('⊏')
+                {PPUDATA}('⊐')
+        if polls_this_frame & UU($01) != 0
+            UU frame_row_addr = FRAME_ROW_ADDR + UU(i) + 1
+            if i >= NUM_VISIBLE_FRAMES
+                frame_row_addr += 2
+            ppu_reset_addr(frame_row_addr)
+            {PPUDATA}('⊑')
+            {PPUDATA}('⊒')

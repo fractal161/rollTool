@@ -1,11 +1,6 @@
-vars /apu
-    Bool play_sfx = false
-
 fn update_audio()
-    if play_sfx
-        play_sfx = false
-        // just copy-pasted from nestris
-        {SQ1_VOL}(%10011000)
-        {SQ1_SWEEP}(%01111111)
-        {SQ1_LO}(%10000000)
-        {SQ1_HI}(%00101000)
+    // just copy-pasted from nestris
+    {SQ1_VOL}(%10011000)
+    {SQ1_SWEEP}(%01111111)
+    {SQ1_LO}(%10000000)
+    {SQ1_HI}(%00101000)

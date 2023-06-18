@@ -2,14 +2,14 @@ fn set_breakpoint(UU addr)
     if DEBUG
         {addr}($FF)
 
-fn write_u(U x, AA addr)
+fn write_u(AA addr, U x)
     ppu_reset_addr(addr)
     fence
     {PPUDATA}(x >> 4)
     {PPUDATA}(x & %1111)
     fence
 
-fn write_uu(UU x, AA addr)
+fn write_uu(AA addr, UU x)
     ppu_reset_addr(addr)
     fence
     {PPUDATA}(x.b >> 4)

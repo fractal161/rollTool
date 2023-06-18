@@ -1,0 +1,43 @@
+/*
+ * INPUT STREAM
+ * Main attraction
+ */
+
+vars /input_stream
+
+fn input_stream_update_state_start()
+    shift_nt1_offset()
+
+// uses current state to determine what background tiles to update. must be
+// called from vblank
+fn input_stream_update_bg_recording()
+    if num_frames_recording < UU(NUM_VISIBLE_FRAMES)
+        U i = num_frames_recording.a << 1
+        UU poll_addr = input_stream_addr + UU(1 + i)
+        if i >= NUM_VISIBLE_FRAMES
+            poll_addr += 2
+        ppu_reset_addr(poll_addr)
+        {PPUDATA}(polls_last_frame.a)
+        {PPUDATA}(polls_last_frame.b)
+
+fn input_stream_update_bg_stop()
+    // clear all in the topmost invisible buffer
+    // TODO: tune if necessary
+    UU clear_addr = input_stream_addr - UU($20 * ROW_HEIGHT)
+    if clear_addr < $2400
+        clear_addr += $3C0
+    fence
+    ppu_reset_addr(clear_addr)
+    for U i = 0; i < 63; i += 1
+        {PPUDATA}(0)
+    fence
+
+fn shift_nt1_offset()
+    // scroll up to push existing entries down
+    input_stream_addr -= $20 * ROW_HEIGHT
+    if input_stream_addr < $2400
+        input_stream_addr += $3C0
+    if input_stream_y < (ROW_HEIGHT << 3)
+        input_stream_y += ($F0 - (ROW_HEIGHT << 3)) // mod 240
+    else
+        input_stream_y -= (ROW_HEIGHT << 3)
