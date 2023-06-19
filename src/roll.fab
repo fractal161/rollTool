@@ -176,13 +176,13 @@ mode main()
             for U i = 0; i < 16; i += 1
                 Bool poll = polls & UU(1)
                 main_hz_update_state_poll(i, poll)
-                //length_stats_update_state_poll(i, poll)
+                length_stats_update_state_poll(i, poll)
                 prev_poll_on = poll
                 polls >>= 1
 
             // then update any additional state
             main_hz_update_state_record()
-            //length_stats_update_state_record()
+            length_stats_update_state_record()
         else if pads[0].pressed & BUTTON_START
             // change mode here
             stat_mode += 1
