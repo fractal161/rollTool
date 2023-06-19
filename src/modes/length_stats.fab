@@ -1,0 +1,47 @@
+/*
+ * LENGTH STATS
+ * roll lengths, and the like. will only keep stats during the first
+ * 480 or so subframes, which should leave us with plenty of space
+ */
+
+vars /length_stats
+    UU ls_sum = 0
+    UUU ls_sum2 = 0
+    UU current_length = 0
+
+data /length_stats
+    [] ls_title 
+        ("LENGTH·STATS")
+
+// updates the background for the current viz. assumes that it's already empty
+fn length_stats_init_bg()
+    ppu_reset_addr($204F)
+    for U i = 0; i < len(ls_title); i += 1
+        {PPUDATA}(@ls_title[i])
+
+fn length_stats_update_state_start()
+    ls_sum = 0
+    ls_sum2 = 0
+
+fn length_stats_update_state_poll(U i, Bool poll)
+    if frame_index > 29
+        return
+    if !poll && prev_poll_on
+        // update sums
+        ls_sum += current_length
+        ls_sum2 += current_length * current_length
+        current_length = 0
+    else if poll
+        current_length += 1
+
+fn length_stats_update_state_record()
+    if frame_index > 29
+        return
+    UU variance_upper = UU(udiv_24(ls_sum2, tap_count))
+    UU variance_lower = UU(udiv_24(UUU(ls_sum), UU(tap_count * tap_count)))
+
+// restores the background to empty
+fn length_stats_clean_bg()
+    ppu_reset_addr($204F)
+    for U i = 0; i < len(ls_title); i += 1
+        {PPUDATA}('·')
