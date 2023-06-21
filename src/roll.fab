@@ -53,6 +53,7 @@ fn update_sprites()
         oam_index += 4
     // write hz sprites
     oam_index = main_hz_update_sprites(oam_index)
+    oam_index = length_stats_update_sprites(oam_index)
     hide_oam(oam_index)
 
 
@@ -77,6 +78,7 @@ fn handle_poll()
         
         main_hz_update_state_start()
         input_stream_update_state_start()
+        length_stats_update_state_start()
 
 fn swap_chr_bank(U register, U bank)
 : +inline
@@ -141,7 +143,6 @@ nmi main_nmi()
     subframe_index = 1 // MUST HAPPEN BEFORE END OF VBLANK
     // set scroll to show current roll viz row
     ppu_reset_mid_scroll(0, 0, 0)
-    set_breakpoint($4444)
 
 mode main()
 : nmi main_nmi
@@ -197,6 +198,8 @@ mode main()
         // since this happens after nmi, guaranteed to work
         if polls_last_frame & UU(1) == 0 && polls_this_frame & UU(1) == 1
             update_audio()
+
+        set_breakpoint($4444)
 
         // wait for all polls to finish up
         fence
