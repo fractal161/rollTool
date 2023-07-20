@@ -59,6 +59,7 @@ fn length_stats_update_state_start()
     ls_sum2 = 0
     max_length = 0
     min_length = 0
+    current_length = 0
 
 fn length_stats_update_state_poll(U i, Bool poll)
     if frame_index > 29

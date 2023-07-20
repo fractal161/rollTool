@@ -59,7 +59,7 @@ fn update_sprites()
 
 fn handle_poll()
 : +inline
-    fence
+    set_breakpoint($4444)
     Bool is_button_pressed = pads[0].held & (BUTTON_LEFT | BUTTON_RIGHT)
     if !is_button_pressed
         return
@@ -199,7 +199,6 @@ mode main()
         if polls_last_frame & UU(1) == 0 && polls_this_frame & UU(1) == 1
             update_audio()
 
-        set_breakpoint($4444)
 
         // wait for all polls to finish up
         fence
@@ -213,8 +212,10 @@ mode main()
             else
                 cooldown -= 1
 
+        fence
         last_recording = recording
         polls_last_frame = polls_this_frame
+        fence
         nmi
 
 chrrom
