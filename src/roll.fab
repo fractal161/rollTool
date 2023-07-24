@@ -1,8 +1,5 @@
 charmap("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ·.-*%⊏⊐⊑⊒[]_⎺")
 
-vars /stats
-    U stat_mode = 0
-
 vars /record_state
     Bool recording = false
     Bool last_recording = false
@@ -53,7 +50,7 @@ fn update_sprites()
         oam_index += 4
     // write hz sprites
     oam_index = main_hz_update_sprites(oam_index)
-    oam_index = length_stats_update_sprites(oam_index)
+    oam_index = stat_update_sprites(oam_index)
     hide_oam(oam_index)
 
 
@@ -78,7 +75,7 @@ fn handle_poll()
         
         main_hz_update_state_start()
         input_stream_update_state_start()
-        length_stats_update_state_start()
+        stat_update_state_start()
 
 fn swap_chr_bank(U register, U bank)
 : +inline
@@ -156,7 +153,7 @@ mode main()
     load_bg()
     main_hz_init_bg()
     frame_row_init_bg()
-    length_stats_init_bg()
+    stat_init_bg()
 
     //set mirroring
     {MMC3_MIRRORING}(0)
@@ -177,13 +174,13 @@ mode main()
             for U i = 0; i < 16; i += 1
                 Bool poll = polls & UU(1)
                 main_hz_update_state_poll(i, poll)
-                length_stats_update_state_poll(i, poll)
+                stat_update_state_poll(i, poll)
                 prev_poll_on = poll
                 polls >>= 1
 
             // then update any additional state
             main_hz_update_state_record()
-            length_stats_update_state_record()
+            stat_update_state_record()
         else if pads[0].pressed & BUTTON_START
             // change mode here
             stat_mode += 1

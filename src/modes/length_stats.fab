@@ -10,7 +10,6 @@ vars /length_stats
     UU current_length = 0
     UU max_length = 0
     UU min_length = 0
-    UU variance = 0
     U[5] mean_digits = U[5](0, 0, 0, 0, 0)
     U[5] var_digits = U[5](0, 0, 0, 0, 0)
 

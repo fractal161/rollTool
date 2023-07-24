@@ -1,0 +1,49 @@
+vars /stats
+    U stat_mode = 0
+
+fn stat_init_bg()
+    switch stat_mode
+        case 0
+            length_stats_init_bg()
+            break
+
+fn stat_update_state_start()
+    switch stat_mode
+        case 0
+            length_stats_update_state_start()
+            break
+
+fn stat_update_state_poll(U i, Bool poll)
+    switch stat_mode
+        case 0
+            length_stats_update_state_poll(i, poll)
+            break
+
+fn stat_update_state_record()
+    switch stat_mode
+        case 0
+            length_stats_update_state_record()
+            break
+
+fn stat_update_sprites(U oam_index) U
+    switch stat_mode
+        case 0
+            return length_stats_update_sprites(oam_index)
+
+fn stat_update_bg()
+    switch stat_mode
+        case 0
+            // length_stats_update_bg()
+            break
+
+fn stat_update_bg_stop()
+    switch stat_mode
+        case 0
+            // length_stats_update_bg_stop()
+            break
+
+fn stat_clean_bg()
+    switch stat_mode
+        case 0
+            length_stats_clean_bg()
+            break

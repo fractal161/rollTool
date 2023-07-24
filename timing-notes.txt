@@ -6,3 +6,4 @@
  - sprite staging is like 10 scanlines?
 
  - with all of the above, a total of 5*15 + 20 + 10 = 95 scanlines used, so maybe like 160 left? that's enough for 8 computations
+ - udiv_24 takes like 20 scanlines????

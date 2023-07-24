@@ -15,11 +15,14 @@ vars /example
 fn example_init_bg()
 
 // initializes all of the fields to their defaults.
-// is also called when the mode is entered (TODO: make this unnecessary?)
-fn example_reset_state()
+// is also called when the mode is entered
+fn example_update_state_start()
 
-// updates the state of the mode. will typically make use of polls_last_frame
-fn example_update_state()
+// update state according to the ith poll of the previous frame
+fn example_update_state_poll(U i, Bool poll)
+
+// update state during recording, after all previous polls have been processed
+fn example_update_state_record()
 
 // uses current state to determine what sprites to display on the next frame
 // returns the updated oam_index
@@ -30,7 +33,7 @@ fn example_update_sprites(U oam_index) U
 fn example_update_bg()
 
 // called when recording finishes
-fn input_stream_update_bg_stop()
+fn example_update_bg_stop()
 
 // restores the background to empty
 fn example_clean_bg()
