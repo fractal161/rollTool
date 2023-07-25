@@ -5,6 +5,7 @@ vars /record_state
     Bool last_recording = false
     U cooldown = 0
     Bool recording_just_finished = false
+    Bool new_stat_mode = false
 
 vars /ppu
     UU input_stream_addr = $2460
@@ -129,6 +130,14 @@ nmi main_nmi()
 
         polls_this_frame = 0
         frame_index += 1
+    else if new_stat_mode
+        stat_clean_bg()
+        // change mode here
+        stat_mode += 1
+        if stat_mode >= NUM_STAT_MODES
+            stat_mode = 0
+        stat_init_bg()
+        new_stat_mode = false
 
     else if recording_just_finished
         input_stream_update_bg_stop()
@@ -182,11 +191,8 @@ mode main()
             main_hz_update_state_record()
             stat_update_state_record()
         else if pads[0].pressed & BUTTON_START
-            // change mode here
-            stat_mode += 1
-            if stat_mode >= NUM_STAT_MODES
-                stat_mode = 0
             // schedule previous mode cleanup, new mode init
+            new_stat_mode = true
         else if pads[0].pressed & BUTTON_SELECT
             // reset stat mode
 

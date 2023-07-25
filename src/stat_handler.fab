@@ -6,6 +6,9 @@ fn stat_init_bg()
         case 0
             length_stats_init_bg()
             break
+        case 1
+            roll_probs_init_bg()
+            break
 
 fn stat_update_state_start()
     switch stat_mode
@@ -46,4 +49,7 @@ fn stat_clean_bg()
     switch stat_mode
         case 0
             length_stats_clean_bg()
+            break
+        case 1
+            roll_probs_clean_bg()
             break

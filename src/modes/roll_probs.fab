@@ -1,0 +1,39 @@
+/*
+ * EXAMPLE MODE
+ * Just a bunch of function signatures to show what might be expected.
+ *
+ * The convention is to prefix each one with the name of the component, but
+ * it doesn't really matter so long as all of the function names are distinct
+ */
+
+// state variables: some may be used across multiple states, but i would
+// prefer to avoid this just in case we don't want to reset state when
+// changing modes
+vars /roll_probs
+
+data /roll_probs
+    [] rp_title 
+        ("TODO")
+
+// updates the background for the current viz. assumes that it's already empty
+fn roll_probs_init_bg()
+    ppu_reset_addr($204F)
+    for U i = 0; i < len(rp_title); i += 1
+        {PPUDATA}(@rp_title[i])
+
+// uses current state to determine what sprites to display on the next frame
+// returns the updated oam_index
+fn roll_probs_update_sprites(U oam_index) U
+
+// uses current state to determine what background tiles to update. must be
+// called from vblank
+fn roll_probs_update_bg()
+
+// called when recording finishes
+fn roll_probs_update_bg_stop()
+
+// restores the background to empty
+fn roll_probs_clean_bg()
+    ppu_reset_addr($204F)
+    for U i = 0; i < len(rp_title); i += 1
+        {PPUDATA}('·')
