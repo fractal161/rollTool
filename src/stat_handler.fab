@@ -1,5 +1,5 @@
 vars /stats
-    U stat_mode = 0
+    U stat_mode = 1
 
 fn stat_init_bg()
     switch stat_mode

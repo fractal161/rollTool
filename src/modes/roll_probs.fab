@@ -9,31 +9,61 @@
 // state variables: some may be used across multiple states, but i would
 // prefer to avoid this just in case we don't want to reset state when
 // changing modes
+
+struct TapInfo
+    U count_and_length
+    U start_index
+
+struct TapFreq
+    U count_and_length
+    U freq
+
 vars /roll_probs
+: +zero_page
+    U sub_frame_index
+    TapInfo[16] sub_info
+    TapFreq[16] freqs
+    UU sub_prev_poll_on
 
 data /roll_probs
-    [] rp_title 
-        ("TODO")
+    [] rp_title
+        ("ROLL·PROBS")
 
 // updates the background for the current viz. assumes that it's already empty
 fn roll_probs_init_bg()
-    ppu_reset_addr($204F)
+    ppu_reset_addr($2050)
     for U i = 0; i < len(rp_title); i += 1
         {PPUDATA}(@rp_title[i])
+    ppu_reset_addr($208C)
+    {PPUDATA}('%')
+    ppu_reset_addr($2093)
+    {PPUDATA}('.')
+    ppu_reset_addr($2096)
+    {PPUDATA}('*')
 
-// uses current state to determine what sprites to display on the next frame
-// returns the updated oam_index
+fn roll_probs_update_state_start()
+
+fn roll_probs_update_state_poll(U i, Bool poll)
+    // to update sub_prev_poll_on, shift in poll and shift out prev_poll
+    Bool tmp_prev_poll_on = sub_prev_poll_on & UU(1)
+    //poll >-> prev_poll_on
+//    if poll && !tmp_prev_poll_on
+//        // if tap count < 11, update tap_count and sub_length
+
+fn roll_probs_update_state_record()
+    // step 1: take all measurements (taps+duration) and put them in frequency list
+    // step 2: sort the frequency list, only need top 3 or top 4
+    // step 3: compute all hz digits, lookup probabilities
+
 fn roll_probs_update_sprites(U oam_index) U
 
-// uses current state to determine what background tiles to update. must be
-// called from vblank
 fn roll_probs_update_bg()
-
-// called when recording finishes
-fn roll_probs_update_bg_stop()
+    // write hz digits
+    // write probs
+    // write tap counts
 
 // restores the background to empty
 fn roll_probs_clean_bg()
-    ppu_reset_addr($204F)
+    ppu_reset_addr($2050)
     for U i = 0; i < len(rp_title); i += 1
         {PPUDATA}('·')
