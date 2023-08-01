@@ -21,7 +21,7 @@ vars /roll
 ct U[64] attr1 = U[64](
     $00, $00, $00, $00, $00, $00, $00, $00,
     $00, $00, $00, $00, $00, $00, $00, $00,
-    $55, $55, $55, $55, $55, $55, $55, $55,
+    $50, $50, $50, $50, $50, $50, $50, $50,
     $00, $00, $00, $00, $00, $00, $00, $00,
     $00, $00, $00, $00, $00, $00, $00, $00,
     $00, $00, $00, $00, $00, $00, $00, $00,
@@ -57,7 +57,7 @@ fn update_sprites()
 
 fn handle_poll()
 : +inline
-    set_breakpoint($4444)
+    //set_breakpoint($4444)
     Bool is_button_pressed = pads[0].held & (BUTTON_LEFT | BUTTON_RIGHT)
     if !is_button_pressed
         return
@@ -131,6 +131,8 @@ nmi main_nmi()
         polls_this_frame = 0
         frame_index += 1
     else if new_stat_mode
+        set_breakpoint($4444)
+        fence
         stat_clean_bg()
         // change mode here
         stat_mode += 1
