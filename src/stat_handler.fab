@@ -15,11 +15,17 @@ fn stat_update_state_start()
         case 0
             length_stats_update_state_start()
             break
+        case 1
+            roll_probs_update_state_start()
+            break
 
 fn stat_update_state_poll(U i, Bool poll)
     switch stat_mode
         case 0
             length_stats_update_state_poll(i, poll)
+            break
+        case 1
+            roll_probs_update_state_poll(i, poll)
             break
 
 fn stat_update_state_record()

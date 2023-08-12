@@ -1,26 +1,21 @@
 /*
- * EXAMPLE MODE
- * Just a bunch of function signatures to show what might be expected.
- *
- * The convention is to prefix each one with the name of the component, but
- * it doesn't really matter so long as all of the function names are distinct
+ * ROLL PROBS
  */
 
-// state variables: some may be used across multiple states, but i would
-// prefer to avoid this just in case we don't want to reset state when
-// changing modes
-
+// packed_info consists of "length" (first 5 bits) and "tap count" (last 3 bits)
+// $F0 is used to represent an uninitialized value, since a 1-tap must have
+// a length of 0.
+// hz can be calculated using 60*length / taps-1
 struct TapInfo
-    U count_and_length
+    U packed_info
     U start_index
 
 struct TapFreq
-    U count_and_length
+    U packed_info
     U freq
 
 vars /roll_probs
 : +zero_page
-    U sub_frame_index
     TapInfo[16] sub_info
     TapFreq[16] freqs
     UU sub_prev_poll_on
@@ -57,25 +52,38 @@ fn roll_probs_init_bg()
         row_addr += $40
 
 fn roll_probs_update_state_start()
+    for U i = 0; i < 16; i += 1
+        sub_info[i].packed_info = $F0
+        freqs[i].freq = $00
 
 fn roll_probs_update_state_poll(U i, Bool poll)
     // to update sub_prev_poll_on, shift in poll and shift out prev_poll
     Bool tmp_prev_poll_on = sub_prev_poll_on & UU(1)
-    //poll >=> prev_poll_on
-//    if poll && !tmp_prev_poll_on
-//        // if tap count < 11, update tap_count and sub_length
+    poll >=> sub_prev_poll_on
+    if poll && !tmp_prev_poll_on
+        U taps = sub_info[i].packed_info & %111
+        // first input for subframe slice
+        if sub_info[i].packed_info == $F0
+            // length of 0 because first input, and 1 tap
+            sub_info[i].packed_info = $00
+            sub_info[i].start_index = frame_index.a
+        // means there are less than 8 inputs
+        else if taps != %111 && frame_index.a < 31
+            U tap_len = frame_index.a - sub_info[i].start_index
+            sub_info[i].packed_info = tap_len << 3 | (taps + 1)
 
 fn roll_probs_update_state_record()
+    // step 0: clear freq list by setting all frequencies to 0
     // step 1: take all measurements (taps+duration) and put them in frequency list
     // step 2: sort the frequency list, only need top 3 or top 4
     // step 3: compute all hz digits, lookup probabilities
 
 fn roll_probs_update_sprites(U oam_index) U
-
-fn roll_probs_update_bg()
     // write hz digits
     // write probs
     // write tap counts
+
+fn roll_probs_update_bg()
 
 // restores the background to empty
 fn roll_probs_clean_bg()
