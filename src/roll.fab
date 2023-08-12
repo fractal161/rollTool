@@ -6,6 +6,7 @@ vars /record_state
     U cooldown = 0
     Bool recording_just_finished = false
     Bool new_stat_mode = false
+    Pad nmi_pads
 
 vars /ppu
     UU input_stream_addr = $2460
@@ -119,6 +120,9 @@ nmi main_nmi()
     // Update OAM and poll the pads (currently scanline 246, cycle 90)
     ppu_upload_oam_poll_pads(0)
     update_pads()
+    // update nmi pads (for actions that should occur once per frame)
+    nmi_pads.pressed = ~nmi_pads.held & pads[0].held
+    nmi_pads.held = pads[0].held
     fence
     if recording
         main_hz_update_bg()
@@ -193,10 +197,10 @@ mode main()
             // then update any additional state
             main_hz_update_state_record()
             stat_update_state_record()
-        else if pads[0].pressed & BUTTON_START
+        else if nmi_pads.pressed & BUTTON_START
             // schedule previous mode cleanup, new mode init
             new_stat_mode = true
-        else if pads[0].pressed & BUTTON_SELECT
+        else if nmi_pads.pressed & BUTTON_SELECT
             // reset stat mode
 
         update_sprites()
