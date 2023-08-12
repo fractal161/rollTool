@@ -50,7 +50,6 @@ fn update_sprites()
         set_oam(oam_index, 12, 19, RECORD_SPRITE, %11)
         oam_index += 4
     // write hz sprites
-    oam_index = main_hz_update_sprites(oam_index)
     oam_index = stat_update_sprites(oam_index)
     hide_oam(oam_index)
 
@@ -115,14 +114,12 @@ irq subframe_poll()
     subframe_index += 1
 
 nmi main_nmi()
-    // schedule irq for showing nt1
-    mmc3_timer(@scanline_intervals[0])
     // make background bank normal
     swap_chr_bank(0, 0)
     // Update OAM and poll the pads (currently scanline 246, cycle 90)
     ppu_upload_oam_poll_pads(0)
     update_pads()
-
+    fence
     if recording
         main_hz_update_bg()
         frame_row_update_bg()
@@ -144,6 +141,10 @@ nmi main_nmi()
     else if recording_just_finished
         input_stream_update_bg_stop()
         recording_just_finished = false
+
+    // schedule irq for showing nt1. this needs to happen *after* any
+    // writes to $2006, since those writes may affect the scanline counter
+    mmc3_timer(@scanline_intervals[0])
 
     // "irq 0"
     subframe_index = 0

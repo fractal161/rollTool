@@ -22,7 +22,7 @@ fn main_hz_init_bg()
     {PPUDATA}('A')
     {PPUDATA}('P')
     {PPUDATA}('S')
-    ppu_reset_addr($3F11)
+    ppu_reset_addr($3F02)
     {PPUDATA}(main_hz_color)
 
 fn main_hz_update_state_start()
@@ -47,26 +47,20 @@ fn main_hz_update_state_record()
         // branch on high byte of hz to set color
         set_hz_color(hz.b)
 
-fn main_hz_update_sprites(U oam_index) U
-    U hz_y = 23
-    if hz_digits[4] != 0
-        set_oam(oam_index, 24, hz_y, hz_digits[4], %00)
-        oam_index += 4
-    set_oam(oam_index, 32, hz_y, hz_digits[3], %00)
-    oam_index += 4
-    set_oam(oam_index, 40, hz_y, hz_digits[2], %00)
-    oam_index += 4
-    set_oam(oam_index, 56, hz_y, hz_digits[1], %00)
-    oam_index += 4
-    set_oam(oam_index, 64, hz_y, hz_digits[0], %00)
-    oam_index += 4
-    // write tap count sprite
-    set_oam(oam_index, 32, hz_y + 16, max(tap_count, 1), %11)
-    oam_index += 4
-    return oam_index
-
 fn main_hz_update_bg()
-    ppu_reset_addr($3F11)
+    ppu_reset_addr($2063)
+    if hz_digits[4] != 0
+        {PPUDATA}($F0+hz_digits[4])
+    else
+        {PPUDATA}('·')
+    {PPUDATA}($F0+hz_digits[3])
+    {PPUDATA}($F0+hz_digits[2])
+    {PPUDATA}('.')
+    {PPUDATA}($F0+hz_digits[1])
+    {PPUDATA}($F0+hz_digits[0])
+    ppu_reset_addr($20A4)
+    {PPUDATA}(max(tap_count, 1))
+    ppu_reset_addr($3F02)
     {PPUDATA}(main_hz_color)
 
 fn set_hz_color(U i)
