@@ -73,15 +73,71 @@ fn roll_probs_update_state_poll(U i, Bool poll)
             sub_info[i].packed_info = tap_len << 3 | (taps + 1)
 
 fn roll_probs_update_state_record()
-    // step 0: clear freq list by setting all frequencies to 0
-    // step 1: take all measurements (taps+duration) and put them in frequency list
-    // step 2: sort the frequency list, only need top 3 or top 4
-    // step 3: compute all hz digits, lookup probabilities
+    // clear freq list by setting all frequencies to 0
+    for U i = 0; i < 16; i += 1
+        freqs[i].freq = $00
+    // take all measurements (taps+duration) and put them in frequency list
+    for U i = 0; i < 16; i += 1
+        U packed = sub_info[i].packed_info
+        for U j = 0; j < 16; j += 1
+            // incorrect code generation?? see discord
+            if freqs[j].freq == 0
+                freqs[j].packed_info = packed
+                // probably bug: diff results between `+= 1` and `= 1`
+                freqs[j].freq += 1
+                break
+            if packed == freqs[j].packed_info
+                freqs[j].freq += 1
+                break
 
 fn roll_probs_update_sprites(U oam_index) U
-    // write hz digits
+    UU taken_freqs = $00
+    // iterate through freq list, taking the max freq each time
+    //for U i = 0; i < 1; i += 1
+    UU freq_flag = 1
+    U max_freq = 0
+    U max_index = 0
+    for U j = 0; j < 16; j += 1
+        // means end of list has been reached
+        if freqs[j].freq == 0
+            break
+        // make sure entry hasn't already been considered
+        if freq_flag & taken_freqs > 0
+            freq_flag <<= 1
+            continue
+        if freqs[j].freq > max_freq
+            max_freq = freqs[j].freq
+            max_index = j
+        freq_flag <<= 1
+    // means that everything has been taken
+    if max_freq == 0
+        return oam_index // to replicate bug, replace with `break`
+    taken_freqs &= freq_flag
+    U length = freqs[max_index].packed_info >> 3
+    // should be +1, but this makes formula a bit quicker
+    U taps = freqs[max_index].packed_info & %111
+    // TODO: could optimize since we only generate 2 digits
+    // compute hz digits (this time for 60hz and not 960hz)
+    UUU hz_dividend = NTSC_FRAMERATE * taps
+    UU hz = UU(udiv_24(hz_dividend, length))
+    U[5] prob_hz_digits = U[5](uu_to_ddddd(hz)) // hz_digits[4] is always 0
+    if taps == 0
+        prob_hz_digits[3] = 0
+        prob_hz_digits[2] = 0
     // write probs
+    // PROBABLY BUG: freqs[max_index].freq should equal max_freq, but for
+    // whatever reason passing max_freq only displays 0
+    set_oam(oam_index, 104, 31, freqs[max_index].freq, %11)
+    oam_index += 4
     // write tap counts
+    set_oam(oam_index, 128, 31, taps+1, %11)
+    oam_index += 4
+    // write hz digits
+    set_oam(oam_index, 144, 31, prob_hz_digits[3], %11)
+    oam_index += 4
+    set_oam(oam_index, 152, 31, prob_hz_digits[2], %11)
+    oam_index += 4
+    return oam_index
 
 fn roll_probs_update_bg()
 
