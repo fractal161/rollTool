@@ -145,6 +145,7 @@ nmi main_nmi()
         main_hz_update_bg()
         frame_row_update_bg()
         input_stream_update_bg_recording()
+        stat_update_bg()
 
         polls_this_frame = 0
         frame_index += 1

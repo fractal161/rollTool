@@ -49,6 +49,9 @@ fn stat_update_bg()
         case 0
             // length_stats_update_bg()
             break
+        case 1
+            roll_probs_update_bg()
+            break
 
 fn stat_update_bg_stop()
     switch stat_mode

@@ -19,6 +19,8 @@ vars /roll_probs
     TapInfo[16] sub_info
     TapFreq[16] freqs
     UU sub_prev_poll_on
+    U[6] probs_hi
+    U[6] probs_lo
 
 data /roll_probs
     [] rp_title
@@ -78,6 +80,10 @@ fn roll_probs_update_state_record()
     // clear freq list by setting all frequencies to 0
     for U i = 0; i < 16; i += 1
         freqs[i].freq = $00
+    // clear values used to display the probs
+    for U i = 0; i < 6; i += 1
+        probs_hi[i] = 0
+        probs_lo[i] = 0
     // take all measurements (taps+duration) and put them in frequency list
     for U i = 0; i < 16; i += 1
         U packed = sub_info[i].packed_info
@@ -108,7 +114,7 @@ fn roll_probs_update_sprites(U oam_index) U
                 continue
             if freqs[j].freq > max_freq
                 max_freq = freqs[j].freq
-                max_index = j // code for this is just not present????
+                max_index = j
                 max_flag = freq_flag
             freq_flag <<= 1
         // means that everything has been taken
@@ -131,12 +137,11 @@ fn roll_probs_update_sprites(U oam_index) U
         if i > 2
             height = 31 + ((i - 3) << 4)
             h_offset = 176
-        // write probs
-        U freq_prob = decimals_16[max_freq]
-        set_oam(oam_index, h_offset, height, freq_prob >> 4, %11)
-        oam_index += 4
-        set_oam(oam_index, h_offset+8, height, freq_prob & %1111, %11)
-        oam_index += 4
+        // store probs, since these are rendered in the bg
+        // these are precomputed since nmi time is apparently tight
+        U prob = decimals_16[max_freq]
+        probs_hi[i] = prob >> 4
+        probs_lo[i] = prob & %1111
         // write tap counts
         if freqs[max_index].packed_info == $F0
             set_oam(oam_index, h_offset+28, height, 0, %11)
@@ -152,15 +157,29 @@ fn roll_probs_update_sprites(U oam_index) U
     return oam_index
 
 fn roll_probs_update_bg()
+    for U i = 0; i < 6; i += 1
+        UU addr = $208C + U($40) * i
+        if i > 2
+            addr += $0A // $2096 - $208C
+            addr -= $C0
+        ppu_reset_addr(addr)
+        // if probs is nonzero, then render digits
+        if probs_hi[i] == 0 && probs_lo[i] == 0
+            {PPUDATA}('·')
+            {PPUDATA}('·')
+        // otherwise, render blanks
+        else
+            {PPUDATA}(probs_hi[i])
+            {PPUDATA}(probs_lo[i])
 
 // restores the background to empty
 fn roll_probs_clean_bg()
     ppu_reset_addr($2050)
     for U i = 0; i < len(rp_title); i += 1
         {PPUDATA}('·')
-    UU row_addr = $208E
+    UU row_addr = $208C // start of probs
     for U i = 0; i < 3; i += 1
         ppu_reset_addr(row_addr)
-        for U j = 0; j < 17; j += 1
+        for U j = 0; j < 19; j += 1
             {PPUDATA}('·')
         row_addr += $40
