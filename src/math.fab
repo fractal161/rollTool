@@ -1,10 +1,46 @@
 vars /division
     UUU asm_dividend
 
+fn udiv_16(UU dividend, UU divisor) UU
+    asm_dividend = UUU(dividend)
+    asm_udiv_16(divisor)
+    return UU(asm_dividend)
+
 fn udiv_24(UUU dividend, UU divisor) UUU
     asm_dividend = dividend
     asm_udiv_24(UUU(divisor))
     return asm_dividend
+
+asm fn asm_udiv_16(UU divisor)
+: employs /division
+    vars
+        UU remainder
+    default
+        lda #0            // preset remainder to 0
+        sta &remainder.a
+        sta &remainder.b
+        ldx #16            // repeat for each bit: ...
+    label divloop
+        asl &asm_dividend.a    // dividend lb & hb*2, msb -> Carry
+        rol &asm_dividend.b
+        rol &remainder.a    // remainder lb & hb * 2 + msb from carry
+        rol &remainder.b
+        lda &remainder.a
+        sec
+        sbc &divisor.a    // substract divisor to see if it fits in
+        tay            // lb result -> Y, for we may need it later
+        lda &remainder.b
+        sbc &divisor.b
+        bcc skip    // if carry=0 then divisor didn't fit in yet
+    
+        sta &remainder.b  // else save substraction result as new remainder,
+        sty &remainder.a
+        inc &asm_dividend.a // and INCrement result cause divisor fit in 1 times
+
+    label skip
+        dex
+        bne divloop
+        rts
 
 // source: https://codebase64.org/doku.php?id=base:24bit_multiplication_24bit_product
 asm fn asm_udiv_24(UUU divisor)

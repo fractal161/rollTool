@@ -1,6 +1,6 @@
 ﻿-- Simulate the following sequence of left button presses
 -- order is right, nothing, right, and so on
-inputs = { 7, 8 }
+inputs = { 20, 14, 14, 24, 10 }
 subframe_count = inputs[1]
 input_index = 1
 

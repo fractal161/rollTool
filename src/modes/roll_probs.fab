@@ -93,7 +93,7 @@ fn roll_probs_update_state_record()
 fn roll_probs_update_sprites(U oam_index) U
     UU taken_freqs = $00
     // iterate through freq list, taking the max freq each time
-    for U i = 0; i < 1; i += 1
+    for U i = 0; i < 3; i += 1
         UU freq_flag = 1
         U max_freq = 0
         U max_index = 0
@@ -114,31 +114,31 @@ fn roll_probs_update_sprites(U oam_index) U
         // means that everything has been taken
         if max_freq == 0
             return oam_index
-        taken_freqs &= max_flag
+        taken_freqs |= max_flag
         U length = freqs[max_index].packed_info >> 3
         // should be +1, but this makes formula a bit quicker
         U taps = freqs[max_index].packed_info & %111
-        // TODO: could optimize since we only generate 2 digits
         // compute hz digits (this time for 60hz and not 960hz)
-        UUU hz_dividend = NTSC_FRAMERATE * taps
-        UU hz = UU(udiv_24(hz_dividend, length))
-        U[5] prob_hz_digits = U[5](uu_to_ddddd(hz)) // hz_digits[4] is always 0
+        UU hz_dividend = U(60) * taps
+        UU hz = udiv_16(hz_dividend, length)
+        U[3] prob_hz_digits = U[3](uu_to_ddd(hz)) // hz_digits[4] is always 0
         if taps == 0
-            prob_hz_digits[3] = 0
-            prob_hz_digits[2] = 0
+            prob_hz_digits[1] = 0
+            prob_hz_digits[0] = 0
         // write probs
-        set_oam(oam_index, 104, 31, max_freq, %11)
+        U height = 31 + (i << 4)
+        set_oam(oam_index, 104, height, max_freq, %11)
         oam_index += 4
         // write tap counts
         if freqs[max_index].packed_info == $F0
-            set_oam(oam_index, 128, 31, 0, %11)
+            set_oam(oam_index, 128, height, 0, %11)
         else
-            set_oam(oam_index, 128, 31, taps+1, %11)
+            set_oam(oam_index, 128, height, taps+1, %11)
         oam_index += 4
         // write hz digits
-        set_oam(oam_index, 144, 31, prob_hz_digits[3], %11)
+        set_oam(oam_index, 144, height, prob_hz_digits[1], %11)
         oam_index += 4
-        set_oam(oam_index, 152, 31, prob_hz_digits[2], %11)
+        set_oam(oam_index, 152, height, prob_hz_digits[0], %11)
         oam_index += 4
 
     return oam_index
