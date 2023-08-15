@@ -17,9 +17,10 @@ data /length_stats
     [] ls_title 
         ("LENGTH·STATS")
 
-ct U[16] decimals_16 = U[16](
+ct U[17] decimals_16 = U[17](
     $00, $06, $13, $19, $25, $31, $38, $44,
     $50, $56, $63, $69, $75, $81, $88, $94,
+    $A0
 )
 
 // updates the background for the current viz. assumes that it's already empty

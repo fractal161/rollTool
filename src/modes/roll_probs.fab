@@ -34,8 +34,8 @@ fn roll_probs_init_bg()
         ppu_reset_addr(row_addr)
         {PPUDATA}('%')
         {PPUDATA}('·')
-        {PPUDATA}('·')
-        {PPUDATA}('T')
+        {PPUDATA}($34) // left half of T
+        {PPUDATA}($35) // right half of T
         {PPUDATA}('·')
         {PPUDATA}('·')
         {PPUDATA}('*')
@@ -44,8 +44,8 @@ fn roll_probs_init_bg()
         {PPUDATA}('·')
         {PPUDATA}('%')
         {PPUDATA}('·')
-        {PPUDATA}('·')
-        {PPUDATA}('T')
+        {PPUDATA}($34) // left half of T
+        {PPUDATA}($35) // right half of T
         {PPUDATA}('·')
         {PPUDATA}('·')
         {PPUDATA}('*')
@@ -125,24 +125,28 @@ fn roll_probs_update_sprites(U oam_index) U
         if taps == 0
             prob_hz_digits[1] = 0
             prob_hz_digits[0] = 0
-        // write probs
+        // layout info
         U height = 31 + (i << 4)
-        U h_offset = 104
+        U h_offset = 96
         if i > 2
             height = 31 + ((i - 3) << 4)
-            h_offset = 184
-        set_oam(oam_index, h_offset, height, max_freq, %11)
+            h_offset = 176
+        // write probs
+        U freq_prob = decimals_16[max_freq]
+        set_oam(oam_index, h_offset, height, freq_prob >> 4, %11)
+        oam_index += 4
+        set_oam(oam_index, h_offset+8, height, freq_prob & %1111, %11)
         oam_index += 4
         // write tap counts
         if freqs[max_index].packed_info == $F0
-            set_oam(oam_index, h_offset+24, height, 0, %11)
+            set_oam(oam_index, h_offset+28, height, 0, %11)
         else
-            set_oam(oam_index, h_offset+24, height, taps+1, %11)
+            set_oam(oam_index, h_offset+28, height, taps+1, %11)
         oam_index += 4
         // write hz digits
-        set_oam(oam_index, h_offset+40, height, prob_hz_digits[1], %11)
+        set_oam(oam_index, h_offset+48, height, prob_hz_digits[1], %11)
         oam_index += 4
-        set_oam(oam_index, h_offset+48, height, prob_hz_digits[0], %11)
+        set_oam(oam_index, h_offset+56, height, prob_hz_digits[0], %11)
         oam_index += 4
 
     return oam_index
