@@ -93,7 +93,7 @@ fn roll_probs_update_state_record()
 fn roll_probs_update_sprites(U oam_index) U
     UU taken_freqs = $00
     // iterate through freq list, taking the max freq each time
-    for U i = 0; i < 3; i += 1
+    for U i = 0; i < 6; i += 1
         UU freq_flag = 1
         U max_freq = 0
         U max_index = 0
@@ -127,18 +127,22 @@ fn roll_probs_update_sprites(U oam_index) U
             prob_hz_digits[0] = 0
         // write probs
         U height = 31 + (i << 4)
-        set_oam(oam_index, 104, height, max_freq, %11)
+        U h_offset = 104
+        if i > 2
+            height = 31 + ((i - 3) << 4)
+            h_offset = 184
+        set_oam(oam_index, h_offset, height, max_freq, %11)
         oam_index += 4
         // write tap counts
         if freqs[max_index].packed_info == $F0
-            set_oam(oam_index, 128, height, 0, %11)
+            set_oam(oam_index, h_offset+24, height, 0, %11)
         else
-            set_oam(oam_index, 128, height, taps+1, %11)
+            set_oam(oam_index, h_offset+24, height, taps+1, %11)
         oam_index += 4
         // write hz digits
-        set_oam(oam_index, 144, height, prob_hz_digits[1], %11)
+        set_oam(oam_index, h_offset+40, height, prob_hz_digits[1], %11)
         oam_index += 4
-        set_oam(oam_index, 152, height, prob_hz_digits[0], %11)
+        set_oam(oam_index, h_offset+48, height, prob_hz_digits[0], %11)
         oam_index += 4
 
     return oam_index
