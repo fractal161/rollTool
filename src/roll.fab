@@ -11,7 +11,6 @@ vars /record_state
 vars /ppu
     UU input_stream_addr = $2460
     U input_stream_y = $14
-    U waste_time = $00
 
 vars /roll
     UU polls_this_frame = 0
@@ -97,15 +96,32 @@ asm fn wait_for_last_poll()
         bne loop
         rts
 
+// old version of the library function, which performs better but risks
+// being glitchy if the hardware writes get reordered
+fn old_ppu_set_mid_scroll(U x, U y, U nt)
+: +inline
+    {PPUADDR}(nt << 2)
+    {PPUSCROLL}(y)
+    {PPUSCROLL}(x)
+    {PPUADDR}(((y & $F8) << 2) | (x >> 3))
+
 irq subframe_poll()
     // acknowledge pending irq, then immediately schedule next irq
     mmc3_timer(@scanline_intervals[subframe_index])
     // set scroll/change chr bank at specific index
     if subframe_index == 7
+        // each hardware read is 4 cpu cycles
+        // using fences guarantees each of these is its own instruction
+        {$100}()
         fence
-        waste_time += 1
+        {$100}()
         fence
-        ppu_set_mid_scroll(0, input_stream_y, 1)
+        {$100}()
+        fence
+        {$100}()
+        fence
+        old_ppu_set_mid_scroll(0, input_stream_y, 1)
+        fence
         swap_chr_bank(0, 2)
     // poll controller (TODO: waste cycles for more accuracy??)
     poll_pads()
