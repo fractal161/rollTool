@@ -124,19 +124,18 @@ fn roll_probs_update_sprites(U oam_index) U
         U length = freqs[max_index].packed_info >> 3
         // should be +1, but this makes formula a bit quicker
         U taps = freqs[max_index].packed_info & %111
-        // compute hz digits (this time for 60hz and not 960hz)
-        UU hz_dividend = U(60) * taps
-        UU hz = udiv_16(hz_dividend, length)
-        U[3] prob_hz_digits = U[3](uu_to_ddd(hz)) // hz_digits[4] is always 0
-        if taps == 0
-            prob_hz_digits[1] = 0
-            prob_hz_digits[0] = 0
+        // fetch hz digits from table
+        U hz_bcd = $00
+        // if taps == 0, then actual tap count is 0 or 1
+        if taps > 0
+            U index = ((taps - 1) << 5) + length
+            hz_bcd = HZ_TABLE[index]
         // layout info
         U height = 31 + (i << 4)
-        U h_offset = 96
+        U h_offset = 124
         if i > 2
             height = 31 + ((i - 3) << 4)
-            h_offset = 176
+            h_offset = 204
         // store probs, since these are rendered in the bg
         // these are precomputed since nmi time is apparently tight
         U prob = decimals_16[max_freq]
@@ -144,14 +143,14 @@ fn roll_probs_update_sprites(U oam_index) U
         probs_lo[i] = prob & %1111
         // write tap counts
         if freqs[max_index].packed_info == $F0
-            set_oam(oam_index, h_offset+28, height, 0, %11)
+            set_oam(oam_index, h_offset, height, 0, %11)
         else
-            set_oam(oam_index, h_offset+28, height, taps+1, %11)
+            set_oam(oam_index, h_offset, height, taps+1, %11)
         oam_index += 4
         // write hz digits
-        set_oam(oam_index, h_offset+48, height, prob_hz_digits[1], %11)
+        set_oam(oam_index, h_offset+20, height, hz_bcd >> 4, %11)
         oam_index += 4
-        set_oam(oam_index, h_offset+56, height, prob_hz_digits[0], %11)
+        set_oam(oam_index, h_offset+28, height, hz_bcd & %1111, %11)
         oam_index += 4
 
     return oam_index
