@@ -143,15 +143,12 @@ fn roll_probs_update_sprites(U oam_index) U
         probs_lo[i] = prob & %1111
         // write tap counts
         if freqs[max_index].packed_info == $F0
-            set_oam(oam_index, h_offset, height, 0, %11)
+            oam_index = push_oam(oam_index, h_offset, height, 0, %11)
         else
-            set_oam(oam_index, h_offset, height, taps+1, %11)
-        oam_index += 4
+            oam_index = push_oam(oam_index, h_offset, height, taps+1, %11)
         // write hz digits
-        set_oam(oam_index, h_offset+20, height, hz_bcd >> 4, %11)
-        oam_index += 4
-        set_oam(oam_index, h_offset+28, height, hz_bcd & %1111, %11)
-        oam_index += 4
+        oam_index = push_oam(oam_index, h_offset+20, height, hz_bcd >> 4, %11)
+        oam_index = push_oam(oam_index, h_offset+28, height, hz_bcd & %1111, %11)
 
     return oam_index
 
