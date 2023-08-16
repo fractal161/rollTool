@@ -1,3 +1,10 @@
+PALETTE
+ - 1st bg palette is for main_hz, text, input stream (i.e. b/w with one extra color)
+ - 2nd bg palette is for frame_row (green/gray)
+ - other two are free to be used by stat modes
+ - last sprite palette is used for recording, all others are free
+
+TIMING (a lot of this seems outdated)
  - each irq seems to take around 5 scanlines, which was the case for both
    unpressed and pressed
  - nmi poll happens at around scanline 246

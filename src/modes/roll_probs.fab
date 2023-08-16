@@ -167,6 +167,11 @@ fn roll_probs_update_bg()
         else
             {PPUDATA}(probs_hi[i])
             {PPUDATA}(probs_lo[i])
+        // update sprite palette
+        addr = $3F11 + UU(i)
+        if i > 2
+            addr += 1
+        // {PPUDATA}(color)
 
 // restores the background to empty
 fn roll_probs_clean_bg()
