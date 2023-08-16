@@ -55,6 +55,8 @@ fn roll_probs_init_bg()
     // for the sprite that covers unused rows
     ppu_reset_addr($3F1F)
     {PPUDATA}($0F)
+    // this really cuts it close
+    roll_probs_update_bg()
 
 fn roll_probs_update_state_start()
     for U i = 0; i < 16; i += 1
@@ -170,9 +172,9 @@ fn roll_probs_update_sprites(U oam_index) U
     return oam_index
 
 fn roll_probs_update_bg()
+    UU addr = $208C
     for U i = 0; i < 6; i += 1
-        UU addr = $208C + U($40) * i
-        if i > 2
+        if i == 3
             addr += $0A // $2096 - $208C
             addr -= $C0
         ppu_reset_addr(addr)
@@ -184,11 +186,12 @@ fn roll_probs_update_bg()
         else
             {PPUDATA}(probs_hi[i])
             {PPUDATA}(probs_lo[i])
+        addr += UU($40)
         // update sprite palette
-        addr = $3F11 + UU(i)
-        if i > 2
-            addr += 1
-        // {PPUDATA}(color)
+        //palette_addr = $3F11 + UU(i)
+        //if i > 2
+        //    addr += 1
+        //{PPUDATA}(color)
 
 // restores the background to empty
 fn roll_probs_clean_bg()
