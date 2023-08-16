@@ -57,6 +57,15 @@ fn roll_probs_init_bg()
     {PPUDATA}($0F)
     // this really cuts it close
     roll_probs_update_bg()
+    // special case for the first time this mode is seen.
+    // this equality implies that freqs array was never touched
+    if freqs[0].freq == 0
+        freqs[0].packed_info = $F0
+        freqs[0].freq = $10
+        // since we're not recording, we need to set tihs manually
+        ppu_reset_addr($208C)
+        {PPUDATA}($0A)
+        {PPUDATA}($00)
 
 fn roll_probs_update_state_start()
     for U i = 0; i < 16; i += 1
