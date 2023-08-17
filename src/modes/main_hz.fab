@@ -49,8 +49,7 @@ fn main_hz_update_state_record()
         UU hz = UU(udiv_24(hz_dividend, interval) << 1)
         hz_digits = U[5](uu_to_ddddd(hz))
         // branch on high byte of hz to set color
-        set_breakpoint($6543)
-        main_hz_color = get_hz_color(hz.b) // doesn't seem to work?
+        main_hz_color = get_hz_color(hz.b)
 
 fn main_hz_update_bg()
     ppu_reset_addr($2063)
