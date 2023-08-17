@@ -15,10 +15,10 @@ Since I personally only have regular access to a retroUSB AVS, that's the only p
 
 If you aren't able to get rollTool working with your unique setup, check the comments of [this issue](https://github.com/fractal161/rollTool/issues/1), which tracks a working list of such problems.
 
-[^1] The information will still be correct, but with a greatly reduced level of accuracy.
+[^1]: The information will still be correct, but with a greatly reduced level of accuracy.
 
 ## Build Process
-This ROM is built with a development build of NESFab 0.8, which is included in this repository as a submodule. Use `git clone --recurse-submodules https://github.com/fractal161/rollTool` to install everything with one command. To build the compiler, `cd` into the `nesfab/` directory and run `make release`. If you have already installed NESFab elsewhere and wish to use that, you'll need to configure the `Makefile` to point to your copy of the `nesfab` executable and configure `roll.cfg` to point to the necessary library files. However, this is discouraged, as different versions of the compiler tend to introduce subtle issues (e.g. small amounts of jittering) since some of the logic is sensitive to timing info.
+This ROM is built with a development build of NESFab 0.9, which is included in this repository as a submodule. Use `git clone --recurse-submodules https://github.com/fractal161/rollTool` to install everything with one command. To build the compiler, `cd` into the `nesfab/` directory and run `make release`. If you have already installed NESFab elsewhere and wish to use that, you'll need to configure the `Makefile` to point to your copy of the `nesfab` executable and configure `roll.cfg` to point to the necessary library files. However, this is discouraged, as different versions of the compiler tend to introduce subtle issues (e.g. small amounts of jittering) since some of the logic is sensitive to timing info.
 
 In addition, you'll need some version of `python`, along with `opencv2` if you wish to build `chr/hz.png` yourself (though this isn't necessary since the file is already provided.)
 
