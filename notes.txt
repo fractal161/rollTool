@@ -4,6 +4,10 @@ PALETTE
  - other two are free to be used by stat modes
  - last sprite palette is used for recording, all others are free
 
+"CALLING CONVENTION"
+ - if a mode adds background tiles, then it's responsible for cleaning them up too
+ - if a mode changes any nonreserved palette, then it is *not* responsible for cleaning this up. thus, it's the responsibility of the mode to ensure it's using the correct palette
+
 TIMING (a lot of this seems outdated)
  - each irq seems to take around 5 scanlines, which was the case for both
    unpressed and pressed

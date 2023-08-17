@@ -21,10 +21,25 @@ vars /roll_probs
     UU sub_prev_poll_on
     U[6] probs_hi
     U[6] probs_lo
+    U[6] probs_color
 
 data /roll_probs
     [] rp_title
         ("ROLL·PROBS")
+
+ct U[6] NUM_OFFSETS = U[6]($00, $E0, $F0, $00, $E0, $F0)
+
+fn roll_probs_reset_state()
+    freqs[0].packed_info = $F0
+    freqs[0].freq = $10
+
+    // filler entry
+    probs_color[0] = $10
+    probs_hi[0] = $0A
+    probs_lo[0] = $00
+    for U i = 1; i < 6; i += 1
+        probs_hi[i] = '·'
+        probs_lo[i] = '·'
 
 // updates the background for the current viz. assumes that it's already empty
 fn roll_probs_init_bg()
@@ -57,15 +72,6 @@ fn roll_probs_init_bg()
     {PPUDATA}($0F)
     // this really cuts it close
     roll_probs_update_bg()
-    // special case for the first time this mode is seen.
-    // this equality implies that freqs array was never touched
-    if freqs[0].freq == 0
-        freqs[0].packed_info = $F0
-        freqs[0].freq = $10
-        // since we're not recording, we need to set tihs manually
-        ppu_reset_addr($208C)
-        {PPUDATA}($0A)
-        {PPUDATA}($00)
 
 fn roll_probs_update_state_start()
     for U i = 0; i < 16; i += 1
@@ -96,8 +102,9 @@ fn roll_probs_update_state_record()
         freqs[i].freq = $00
     // clear values used to display the probs
     for U i = 0; i < 6; i += 1
-        probs_hi[i] = 0
-        probs_lo[i] = 0
+        // hack to make the update_bg logic a bit nicer
+        probs_hi[i] = '·'
+        probs_lo[i] = '·'
     // take all measurements (taps+duration) and put them in frequency list
     for U i = 0; i < 16; i += 1
         U packed = sub_info[i].packed_info
@@ -148,22 +155,30 @@ fn roll_probs_update_sprites(U oam_index) U
         // layout info
         U height = 31 + (i << 4)
         U h_offset = 124
+        U spr_color = 0
+        U num_off = NUM_OFFSETS[i]
         if i > 2
             height -= 48
             h_offset += 80
+            spr_color = 1
         // store probs, since these are rendered in the bg
         // these are precomputed since nmi time is apparently tight
         U prob = decimals_16[max_freq]
         probs_hi[i] = prob >> 4
         probs_lo[i] = prob & %1111
+        probs_color[i] = get_hz_color_bcd(hz_bcd)
         // write tap counts
         if freqs[max_index].packed_info == $F0
             oam_index = push_oam(oam_index, h_offset, height, 0, %11)
         else
             oam_index = push_oam(oam_index, h_offset, height, taps+1, %11)
         // write hz digits
-        oam_index = push_oam(oam_index, h_offset+20, height, hz_bcd >> 4, %11)
-        oam_index = push_oam(oam_index, h_offset+28, height, hz_bcd & %1111, %11)
+        oam_index = push_oam(oam_index, h_offset+20,
+            height, num_off + (hz_bcd >> 4), spr_color
+        )
+        oam_index = push_oam(oam_index, h_offset+28,
+            height, num_off + (hz_bcd & %1111), spr_color
+        )
         i += 1
     // now, fill remaining spaces with blacks
     while i < 6
@@ -187,20 +202,25 @@ fn roll_probs_update_bg()
             addr += $0A // $2096 - $208C
             addr -= $C0
         ppu_reset_addr(addr)
-        // if probs is nonzero, then render digits
-        if probs_hi[i] == 0 && probs_lo[i] == 0
-            {PPUDATA}('·')
-            {PPUDATA}('·')
-        // otherwise, render blanks
-        else
-            {PPUDATA}(probs_hi[i])
-            {PPUDATA}(probs_lo[i])
+        // thanks to how this is initialized, handles blanks
+        {PPUDATA}(probs_hi[i])
+        {PPUDATA}(probs_lo[i])
         addr += UU($40)
-        // update sprite palette
-        //palette_addr = $3F11 + UU(i)
-        //if i > 2
-        //    addr += 1
-        //{PPUDATA}(color)
+    // update sprite palette
+    ppu_reset_addr($3F11)
+    for U i = 0; i < 3; i += 1
+        {PPUDATA}(probs_color[i])
+    // dummy palette value
+    {PPUDATA}($0F)
+    for U i = 3; i < 6; i += 1
+        {PPUDATA}(probs_color[i])
+
+fn get_hz_color_bcd(U i) U
+    for U j = 0; j < 11; j += 1
+        set_breakpoint($6543)
+        if i <= HZ_THRESHOLDS_BCD[j]
+            return HZ_GRADIENT[j]
+    return HZ_GRADIENT[11]
 
 // restores the background to empty
 fn roll_probs_clean_bg()

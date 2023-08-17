@@ -10,7 +10,7 @@ fn input_stream_update_state_start()
 
 // uses current state to determine what background tiles to update. must be
 // called from vblank
-fn input_stream_update_bg_recording()
+fn input_stream_update_bg()
     if frame_index < UU(NUM_VISIBLE_FRAMES)
         U i = frame_index.a << 1
         UU poll_addr = input_stream_addr + UU(1 + i)

@@ -148,7 +148,7 @@ nmi main_nmi()
     if recording
         main_hz_update_bg()
         frame_row_update_bg()
-        input_stream_update_bg_recording()
+        input_stream_update_bg()
         stat_update_bg()
 
         polls_this_frame = 0
@@ -188,6 +188,12 @@ mode main()
     // set and load the level
     hide_oam(0)
     load_bg()
+
+    // init states of things
+    roll_probs_reset_state()
+
+
+    // initialize bg for each default mode
     main_hz_init_bg()
     frame_row_init_bg()
     stat_init_bg()

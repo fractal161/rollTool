@@ -11,6 +11,10 @@
 // changing modes
 vars /example
 
+// initializes the data upon reset, which lets us control how the view looks
+// when seeing it for the first time
+fn example_reset_state()
+
 // updates the background for the current viz. assumes that it's already empty
 fn example_init_bg()
 

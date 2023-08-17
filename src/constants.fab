@@ -85,3 +85,8 @@ ct U[] HZ_GRADIENT = U[](
 ct U[] HZ_THRESHOLDS = U[](
     $0F, $13, $17, $1F, $27, $4E, $75
 )
+
+// for the roll probs, which use a lookup table of bcd values
+ct U[] HZ_THRESHOLDS_BCD = U[](
+    $02, $05, $07, $10, $12, $15, $18, $20, $23, $24, $28
+)
