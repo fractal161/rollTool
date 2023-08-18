@@ -15,14 +15,14 @@ struct TapFreq
     U freq
 
 vars /roll_probs_core
-    TapInfo[16] sub_info
-    UU sub_prev_poll_on
+    TapInfo[16] sub_info = TapInfo[16]()
+    UU sub_prev_poll_on = 0
 
 vars /roll_probs
-    TapFreq[16] freqs
-    U[6] probs_hi
-    U[6] probs_lo
-    U[6] probs_color
+    TapFreq[16] freqs = TapFreq[16]()
+    U[6] probs_hi = U[6]()
+    U[6] probs_lo = U[6]()
+    U[6] probs_color = U[6]()
 
 data /roll_probs
     [] rp_title
