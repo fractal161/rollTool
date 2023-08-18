@@ -1,0 +1,32 @@
+data /length_stats_spaces
+    [] space_title
+        ("SPACE·STATS")
+
+fn length_stats_spaces_init_bg()
+    ppu_reset_addr($204F)
+    for U i = 0; i < len(space_title); i += 1
+        {PPUDATA}(@space_title[i])
+
+fn length_stats_spaces_update_display_state()
+    if frame_index > 29 || tap_count > 30
+        return
+    U clamped_tap = max(tap_count-1, 1)
+    UUU variance_upper = udiv_24(UUU(ls_sum2_spaces*25), UU(clamped_tap) << 2)
+    UUU variance_lower = udiv_24(
+        UUU(25*UUU(ls_sum_spaces * ls_sum_spaces)),
+        UU(clamped_tap * clamped_tap) << 2
+    )
+    UU mean = UU(
+        udiv_24(UUU(ls_sum_spaces*25),
+        clamped_tap << 2)
+    )
+    mean_digits = uu_to_ddddd(mean)
+    // guaranteed to fit inside a UU given our constraints
+    var_digits = uu_to_ddddd(UU(variance_upper - variance_lower))
+    max_length = max_length_spaces
+    min_length = min_length_spaces
+
+fn length_stats_spaces_clean_bg()
+    ppu_reset_addr($204F)
+    for U i = 0; i < len(space_title); i += 1
+        {PPUDATA}('·')

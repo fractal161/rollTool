@@ -1,44 +1,30 @@
+data /length_stats_inputs
+    [] input_title
+        ("INPUT·STATS")
+
+fn length_stats_inputs_init_bg()
+    ppu_reset_addr($204F)
+    for U i = 0; i < len(input_title); i += 1
+        {PPUDATA}(@input_title[i])
+
 fn length_stats_inputs_update_display_state()
     if frame_index > 29 || tap_count > 30
         return
-    UUU variance_upper = udiv_24(UUU(ls_sum2*25), UU(tap_count) << 2)
-    UUU variance_lower = udiv_24(UUU(25*UUU(ls_sum * ls_sum)), UU(tap_count * tap_count) << 2)
+
+    UUU variance_upper = udiv_24(times_25(ls_sum2_inputs), UU(tap_count << 2))
+    UUU variance_lower = udiv_24(
+        UUU(times_25(ls_sum_inputs * ls_sum_inputs)),
+        UU(tap_count * tap_count) << 2
+    )
     U clamped_tap = max(tap_count, 1)
-    UU mean = UU(udiv_24(UUU(ls_sum*25), clamped_tap << 2))
+    UU mean = UU(udiv_24(times_25(ls_sum_inputs), clamped_tap << 2))
     mean_digits = uu_to_ddddd(mean)
     // guaranteed to fit inside a UU given our constraints
     var_digits = uu_to_ddddd(UU(variance_upper - variance_lower))
+    max_length = max_length_inputs
+    min_length = min_length_inputs
 
-fn length_stats_inputs_update_sprites(U oam_index) U
-    // mean
-    if mean_digits[3] > 0
-        oam_index = push_oam(oam_index, 128, 31, mean_digits[3], %11)
-    oam_index = push_oam(oam_index, 136, 31, mean_digits[2], %11)
-    oam_index = push_oam(oam_index, 152, 31, mean_digits[1], %11)
-    oam_index = push_oam(oam_index, 160, 31, mean_digits[0], %11)
-
-    // variance
-    if var_digits[3] > 0
-        oam_index = push_oam(oam_index, 128, 47, var_digits[3], %11)
-    oam_index = push_oam(oam_index, 136, 47, var_digits[2], %11)
-    oam_index = push_oam(oam_index, 152, 47, var_digits[1], %11)
-    oam_index = push_oam(oam_index, 160, 47, var_digits[0], %11)
-
-    // max
-    U max_high = max_length.b & %1111
-    if max_high > 0
-        oam_index = push_oam(oam_index, 200, 31, max_high, %11)
-    oam_index = push_oam(oam_index, 208, 31, max_length.a >> 4, %11)
-    U max_decimal = decimals_16[max_length.a & %1111]
-    oam_index = push_oam(oam_index, 224, 31, max_decimal >> 4, %11)
-    oam_index = push_oam(oam_index, 232, 31, max_decimal & %1111, %11)
-
-    // min
-    U min_high = min_length.b & %1111
-    if min_high > 0
-        oam_index = push_oam(oam_index, 200, 47, min_high, %11)
-    oam_index = push_oam(oam_index, 208, 47, min_length.a >> 4, %11)
-    U min_decimal = decimals_16[min_length.a & %1111]
-    oam_index = push_oam(oam_index, 224, 47, min_decimal >> 4, %11)
-    oam_index = push_oam(oam_index, 232, 47, min_decimal & %1111, %11)
-    return oam_index
+fn length_stats_inputs_clean_bg()
+    ppu_reset_addr($204F)
+    for U i = 0; i < len(input_title); i += 1
+        {PPUDATA}('·')

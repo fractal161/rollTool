@@ -2,7 +2,7 @@ vars /stats
     U stat_mode = 0
     U submode = 0
 
-ct U[NUM_STAT_MODES] submodes = U[NUM_STAT_MODES](1, 1)
+ct U[NUM_STAT_MODES] submodes = U[NUM_STAT_MODES](1, 2)
 
 // assigning these here makes it simpler to change their order
 ct U LENGTH_STATS_MODE = 1
@@ -29,17 +29,21 @@ fn inc_submode()
 fn stat_init_bg()
     switch stat_mode
         case LENGTH_STATS_MODE
-            // all length stats use same layout
+            // all length stats use same layout, but diff title
+            length_stats_init_bg()
             switch submode
                 case LENGTH_STATS_INPUTS
-                    length_stats_init_bg()
-                break
+                    length_stats_inputs_init_bg()
+                    break
+                case LENGTH_STATS_SPACES
+                    length_stats_spaces_init_bg()
+                    break
             break
         case ROLL_PROBS_MODE
             switch submode
                 case ROLL_PROBS_EXTRA
                     roll_probs_extra_init_bg()
-                break
+                    break
             break
 
 fn stat_update_state_start()
@@ -66,7 +70,10 @@ fn stat_update_display_state()
             switch submode
                 case LENGTH_STATS_INPUTS
                     length_stats_inputs_update_display_state()
-                break
+                    break
+                case LENGTH_STATS_SPACES
+                    length_stats_spaces_update_display_state()
+                    break
             break
         case ROLL_PROBS_MODE
             switch submode
@@ -78,9 +85,12 @@ fn stat_update_display_state()
 fn stat_update_sprites(U oam_index) U
     switch stat_mode
         case LENGTH_STATS_MODE
+            // same types of stats
             switch submode
                 case LENGTH_STATS_INPUTS
-                    return length_stats_inputs_update_sprites(oam_index)
+                    return length_stats_update_sprites(oam_index)
+                case LENGTH_STATS_SPACES
+                    return length_stats_update_sprites(oam_index)
         case ROLL_PROBS_MODE
             switch submode
                 case ROLL_PROBS_EXTRA
@@ -92,6 +102,9 @@ fn stat_update_bg()
             // currently does nothing
             switch submode
                 case LENGTH_STATS_INPUTS
+                    length_stats_update_bg()
+                    break
+                case LENGTH_STATS_SPACES
                     length_stats_update_bg()
                     break
             break
@@ -110,6 +123,9 @@ fn stat_update_bg_stop()
                 case LENGTH_STATS_INPUTS
                     length_stats_update_bg_stop()
                     break
+                case LENGTH_STATS_SPACES
+                    length_stats_update_bg_stop()
+                    break
             break
         case ROLL_PROBS_MODE
             // currently does nothing
@@ -122,10 +138,14 @@ fn stat_update_bg_stop()
 fn stat_clean_bg()
     switch stat_mode
         case LENGTH_STATS_MODE
-            // all length stats use same layout
+            // all length stats use same layout, with different title
+            length_stats_clean_bg()
             switch submode
                 case LENGTH_STATS_INPUTS
-                    length_stats_clean_bg()
+                    length_stats_inputs_clean_bg()
+                    break
+                case LENGTH_STATS_SPACES
+                    length_stats_spaces_clean_bg()
                     break
             break
         case ROLL_PROBS_MODE

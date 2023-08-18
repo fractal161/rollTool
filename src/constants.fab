@@ -35,6 +35,12 @@ data /scanline
         U(15)
         U(20)
 
+ct U[17] decimals_16 = U[17](
+    $00, $06, $13, $19, $25, $31, $38, $44,
+    $50, $56, $63, $69, $75, $81, $88, $94,
+    $A0
+)
+
 // bit flag constants
 ct U TRANS_MODE_CLEAN    = 1 << 0
 ct U TRANS_MODE_INIT     = 1 << 1

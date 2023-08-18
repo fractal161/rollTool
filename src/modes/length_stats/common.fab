@@ -5,31 +5,26 @@
  */
 
 vars /length_stats_core
-    UU ls_sum = 0
-    UUU ls_sum2 = 0
     UU current_length = 0
     UU max_length = 0
     UU min_length = 0
 
-vars /length_stats_input
+    UU ls_sum_inputs = 0
+    UUU ls_sum2_inputs = 0
+    UU max_length_inputs = 0
+    UU min_length_inputs = 0
+
+    UU ls_sum_spaces = 0
+    UUU ls_sum2_spaces = 0
+    UU max_length_spaces = 0
+    UU min_length_spaces = 0
+
+    // sharing this is a bit dirty but it works for now
     U[5] mean_digits = U[5](0, 0, 0, 0, 0)
     U[5] var_digits = U[5](0, 0, 0, 0, 0)
 
-data /length_stats_input
-    [] ls_title 
-        ("LENGTH·STATS")
-
-ct U[17] decimals_16 = U[17](
-    $00, $06, $13, $19, $25, $31, $38, $44,
-    $50, $56, $63, $69, $75, $81, $88, $94,
-    $A0
-)
-
 // for now, all modes use this
 fn length_stats_init_bg()
-    ppu_reset_addr($204F)
-    for U i = 0; i < len(ls_title); i += 1
-        {PPUDATA}(@ls_title[i])
     ppu_reset_addr($208C)
     {PPUDATA}('M')
     {PPUDATA}('E')
@@ -57,27 +52,84 @@ fn length_stats_init_bg()
     {PPUDATA}('.')
 
 fn length_stats_update_state_start()
-    ls_sum = 0
-    ls_sum2 = 0
-    max_length = 0
-    min_length = 0
+    ls_sum_inputs = 0
+    ls_sum2_inputs = 0
+    max_length_inputs = 0
+    min_length_inputs = 0
+
+    ls_sum_spaces = 0
+    ls_sum2_spaces = 0
+    max_length_spaces = 0
+    min_length_spaces = 0
+
     current_length = 0
 
 fn length_stats_update_state_poll(U i, Bool poll)
     if frame_index > 29
         return
     if !poll && prev_poll_on
-        // update sums
-        ls_sum += current_length
-        ls_sum2 += current_length * current_length
-        max_length = max(current_length, max_length)
+        // update sums/extremes for inputs
+        ls_sum_inputs += current_length
+        fence
+        ls_sum2_inputs += current_length * current_length
+        max_length_inputs = max(current_length, max_length_inputs)
         if tap_count > 1
-            min_length = min(current_length, min_length)
+            min_length_inputs = min(current_length, min_length_inputs)
         else
-            min_length = current_length
-        current_length = 0
-    else if poll
+            min_length_inputs = current_length
+        current_length = 1
+    else if poll && !prev_poll_on
+        // first, check that if inputs have been processed
+        if max_length_inputs == 0
+            current_length = 1
+            return
+        // update sums/extremes for spaces
+        ls_sum_spaces += current_length
+        // this is needed to not take too much time???
+        fence
+        ls_sum2_spaces += current_length * current_length
+        max_length_spaces = max(current_length, max_length_spaces)
+        if tap_count > 2
+            min_length_spaces = min(current_length, min_length_spaces)
+        else
+            min_length_spaces = current_length
+        current_length = 1
+    else
         current_length += 1
+
+fn length_stats_update_sprites(U oam_index) U
+    // mean
+    if mean_digits[3] > 0
+        oam_index = push_oam(oam_index, 128, 31, mean_digits[3], %11)
+    oam_index = push_oam(oam_index, 136, 31, mean_digits[2], %11)
+    oam_index = push_oam(oam_index, 152, 31, mean_digits[1], %11)
+    oam_index = push_oam(oam_index, 160, 31, mean_digits[0], %11)
+
+    // variance
+    if var_digits[3] > 0
+        oam_index = push_oam(oam_index, 128, 47, var_digits[3], %11)
+    oam_index = push_oam(oam_index, 136, 47, var_digits[2], %11)
+    oam_index = push_oam(oam_index, 152, 47, var_digits[1], %11)
+    oam_index = push_oam(oam_index, 160, 47, var_digits[0], %11)
+
+    // max
+    U max_high = max_length.b & %1111
+    if max_high > 0
+        oam_index = push_oam(oam_index, 200, 31, max_high, %11)
+    oam_index = push_oam(oam_index, 208, 31, max_length.a >> 4, %11)
+    U max_decimal = decimals_16[max_length.a & %1111]
+    oam_index = push_oam(oam_index, 224, 31, max_decimal >> 4, %11)
+    oam_index = push_oam(oam_index, 232, 31, max_decimal & %1111, %11)
+
+    // min
+    U min_high = min_length.b & %1111
+    if min_high > 0
+        oam_index = push_oam(oam_index, 200, 47, min_high, %11)
+    oam_index = push_oam(oam_index, 208, 47, min_length.a >> 4, %11)
+    U min_decimal = decimals_16[min_length.a & %1111]
+    oam_index = push_oam(oam_index, 224, 47, min_decimal >> 4, %11)
+    oam_index = push_oam(oam_index, 232, 47, min_decimal & %1111, %11)
+    return oam_index
 
 // placeholder for stat_handler
 fn length_stats_update_bg()
@@ -87,9 +139,6 @@ fn length_stats_update_bg_stop()
 
 // restores the background to empty. all modes use this for now
 fn length_stats_clean_bg()
-    ppu_reset_addr($204F)
-    for U i = 0; i < len(ls_title); i += 1
-        {PPUDATA}('·')
     ppu_reset_addr($208C)
     {PPUDATA}('·')
     {PPUDATA}('·')
@@ -115,3 +164,7 @@ fn length_stats_clean_bg()
     {PPUDATA}('·')
     ppu_reset_addr($20DB)
     {PPUDATA}('·')
+
+fn times_25(UUU x) UUU
+: +inline
+    return (x << 4) + (x << 3) + x
