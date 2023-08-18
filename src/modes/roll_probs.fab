@@ -14,11 +14,12 @@ struct TapFreq
     U packed_info
     U freq
 
-vars /roll_probs
-: +zero_page
+vars /roll_probs_core
     TapInfo[16] sub_info
-    TapFreq[16] freqs
     UU sub_prev_poll_on
+
+vars /roll_probs
+    TapFreq[16] freqs
     U[6] probs_hi
     U[6] probs_lo
     U[6] probs_color
@@ -76,7 +77,6 @@ fn roll_probs_init_bg()
 fn roll_probs_update_state_start()
     for U i = 0; i < 16; i += 1
         sub_info[i].packed_info = $F0
-        freqs[i].freq = $00
 
 fn roll_probs_update_state_poll(U i, Bool poll)
     // to update sub_prev_poll_on, shift in poll and shift out prev_poll

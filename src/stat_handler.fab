@@ -6,13 +6,13 @@ ct U[NUM_STAT_MODES] submodes = U[NUM_STAT_MODES](1, 1)
 
 // assigning these here makes it simpler to change their order
 ct U LENGTH_STATS_MODE = 1
-ct U LENGTH_STATS_SUBMODE_INPUTS = 0
-ct U LENGTH_STATS_SUBMODE_SPACES = 1
-ct U LENGTH_STATS_SUBMODE_ALL = 2
+ct U LENGTH_STATS_INPUTS = 0
+ct U LENGTH_STATS_SPACES = 1
+ct U LENGTH_STATS_ALL = 2
 
 ct U ROLL_PROBS_MODE = 0
-ct U ROLL_PROBS_SUBMODE_EXTRA = 0
-ct U ROLL_PROBS_SUBMODE_BASIC = 1
+ct U ROLL_PROBS_EXTRA = 0
+ct U ROLL_PROBS_BASIC = 1
 
 fn inc_stat_mode()
     // TODO: memorize this
@@ -30,13 +30,13 @@ fn stat_init_bg()
     switch stat_mode
         case LENGTH_STATS_MODE
             switch submode
-                case LENGTH_STATS_SUBMODE_INPUTS
+                case LENGTH_STATS_INPUTS
                     length_stats_init_bg()
                 break
             break
         case ROLL_PROBS_MODE
             switch submode
-                case ROLL_PROBS_SUBMODE_EXTRA
+                case ROLL_PROBS_EXTRA
                     roll_probs_init_bg()
                 break
             break
@@ -63,61 +63,69 @@ fn stat_update_display_state()
     switch stat_mode
         case LENGTH_STATS_MODE
             switch submode
-                case LENGTH_STATS_SUBMODE_INPUTS
+                case LENGTH_STATS_INPUTS
                     length_stats_update_display_state()
                 break
             break
         case ROLL_PROBS_MODE
-            roll_probs_update_display_state()
+            switch submode
+                case ROLL_PROBS_EXTRA
+                    roll_probs_update_display_state()
+                    break
             break
 
 fn stat_update_sprites(U oam_index) U
     switch stat_mode
         case LENGTH_STATS_MODE
             switch submode
-                case LENGTH_STATS_SUBMODE_INPUTS
+                case LENGTH_STATS_INPUTS
                     return length_stats_update_sprites(oam_index)
         case ROLL_PROBS_MODE
-            return roll_probs_update_sprites(oam_index)
+            switch submode
+                case ROLL_PROBS_EXTRA
+                    return roll_probs_update_sprites(oam_index)
 
 fn stat_update_bg()
     switch stat_mode
         case LENGTH_STATS_MODE
             switch submode
-                case LENGTH_STATS_SUBMODE_INPUTS
+                case LENGTH_STATS_INPUTS
                     length_stats_update_bg()
                     break
             break
         case ROLL_PROBS_MODE
-            roll_probs_update_bg()
+            switch submode
+                case ROLL_PROBS_EXTRA
+                    roll_probs_update_bg()
+                    break
             break
 
 fn stat_update_bg_stop()
     switch stat_mode
         case LENGTH_STATS_MODE
             switch submode
-                case LENGTH_STATS_SUBMODE_INPUTS
+                case LENGTH_STATS_INPUTS
                     length_stats_update_bg_stop()
-                break
+                    break
             break
         case ROLL_PROBS_MODE
             switch submode
-                case LENGTH_STATS_SUBMODE_INPUTS
+                case ROLL_PROBS_EXTRA
                     roll_probs_update_bg_stop()
-                break
+                    break
             break
 
 fn stat_clean_bg()
     switch stat_mode
         case LENGTH_STATS_MODE
             switch submode
-                case LENGTH_STATS_SUBMODE_INPUTS
+                case LENGTH_STATS_INPUTS
                     length_stats_clean_bg()
-                break
+                    break
             break
         case ROLL_PROBS_MODE
             switch submode
-                case LENGTH_STATS_SUBMODE_INPUTS
+                case ROLL_PROBS_EXTRA
                     roll_probs_clean_bg()
-                break
+                    break
             break

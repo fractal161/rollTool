@@ -4,16 +4,18 @@
  * 480 or so subframes, which should leave us with plenty of space
  */
 
-vars /length_stats
+vars /length_stats_core
     UU ls_sum = 0
     UUU ls_sum2 = 0
     UU current_length = 0
     UU max_length = 0
     UU min_length = 0
+
+vars /length_stats_input
     U[5] mean_digits = U[5](0, 0, 0, 0, 0)
     U[5] var_digits = U[5](0, 0, 0, 0, 0)
 
-data /length_stats
+data /length_stats_input
     [] ls_title 
         ("LENGTH·STATS")
 
