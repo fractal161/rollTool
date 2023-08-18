@@ -36,8 +36,10 @@ data /scanline
         U(20)
 
 // bit flag constants
-ct U TRANS_MODE_CLEAN = 1 << 0
-ct U TRANS_MODE_INIT  = 1 << 1
+ct U TRANS_MODE_CLEAN    = 1 << 0
+ct U TRANS_MODE_INIT     = 1 << 1
+ct U TRANS_SUBMODE_CLEAN = 1 << 2
+ct U TRANS_SUBMODE_INIT  = 1 << 3
 
 ct U RECORDING               = 1 << 0
 ct U LAST_RECORDING          = 1 << 1

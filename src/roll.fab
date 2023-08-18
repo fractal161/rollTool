@@ -154,11 +154,16 @@ nmi main_nmi()
     else if trans_flags & TRANS_MODE_CLEAN
         stat_clean_bg()
         // change mode here
-        stat_mode += 1
-        if stat_mode >= NUM_STAT_MODES
-            stat_mode = 0
+        inc_stat_mode()
         trans_flags = TRANS_MODE_INIT
     else if trans_flags & TRANS_MODE_INIT
+        stat_init_bg()
+        trans_flags = 0
+    else if trans_flags & TRANS_SUBMODE_CLEAN
+        stat_clean_bg()
+        inc_submode()
+        trans_flags = TRANS_SUBMODE_INIT
+    else if trans_flags & TRANS_SUBMODE_INIT
         stat_init_bg()
         trans_flags = 0
     else if recording_flags & RECORDING_JUST_FINISHED
@@ -220,8 +225,11 @@ mode main()
                 polls >>= 1
 
         else if nmi_pads.pressed & BUTTON_START
+            if nmi_pads.held & BUTTON_A
             // schedule previous mode cleanup, new mode init
-            trans_flags = TRANS_MODE_CLEAN
+                trans_flags = TRANS_SUBMODE_CLEAN
+            else
+                trans_flags = TRANS_MODE_CLEAN
         else if nmi_pads.pressed & BUTTON_SELECT
             // reset stat mode
 

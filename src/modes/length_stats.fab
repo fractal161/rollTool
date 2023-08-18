@@ -121,6 +121,12 @@ fn length_stats_update_sprites(U oam_index) U
     oam_index = push_oam(oam_index, 232, 47, min_decimal & %1111, %11)
     return oam_index
 
+// placeholder for stat_handler
+fn length_stats_update_bg()
+
+// placeholder for stat_handler
+fn length_stats_update_bg_stop()
+
 // restores the background to empty
 fn length_stats_clean_bg()
     ppu_reset_addr($204F)

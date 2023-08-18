@@ -1,69 +1,123 @@
 vars /stats
-    U stat_mode = 1
+    U stat_mode = 0
+    U submode = 0
+
+ct U[NUM_STAT_MODES] submodes = U[NUM_STAT_MODES](1, 1)
+
+// assigning these here makes it simpler to change their order
+ct U LENGTH_STATS_MODE = 1
+ct U LENGTH_STATS_SUBMODE_INPUTS = 0
+ct U LENGTH_STATS_SUBMODE_SPACES = 1
+ct U LENGTH_STATS_SUBMODE_ALL = 2
+
+ct U ROLL_PROBS_MODE = 0
+ct U ROLL_PROBS_SUBMODE_EXTRA = 0
+ct U ROLL_PROBS_SUBMODE_BASIC = 1
+
+fn inc_stat_mode()
+    // TODO: memorize this
+    submode = 0
+    stat_mode += 1
+    if stat_mode >= NUM_STAT_MODES
+        stat_mode = 0
+
+fn inc_submode()
+    submode += 1
+    if submode >= submodes[stat_mode]
+        submode = 0
 
 fn stat_init_bg()
     switch stat_mode
-        case 0
-            length_stats_init_bg()
+        case LENGTH_STATS_MODE
+            switch submode
+                case LENGTH_STATS_SUBMODE_INPUTS
+                    length_stats_init_bg()
+                break
             break
-        case 1
-            roll_probs_init_bg()
+        case ROLL_PROBS_MODE
+            switch submode
+                case ROLL_PROBS_SUBMODE_EXTRA
+                    roll_probs_init_bg()
+                break
             break
 
 fn stat_update_state_start()
     switch stat_mode
-        case 0
+        case LENGTH_STATS_MODE
             length_stats_update_state_start()
             break
-        case 1
+        case ROLL_PROBS_MODE
             roll_probs_update_state_start()
             break
 
 fn stat_update_state_poll(U i, Bool poll)
     switch stat_mode
-        case 0
+        case LENGTH_STATS_MODE
             length_stats_update_state_poll(i, poll)
             break
-        case 1
+        case ROLL_PROBS_MODE
             roll_probs_update_state_poll(i, poll)
             break
 
 fn stat_update_display_state()
     switch stat_mode
-        case 0
-            length_stats_update_display_state()
+        case LENGTH_STATS_MODE
+            switch submode
+                case LENGTH_STATS_SUBMODE_INPUTS
+                    length_stats_update_display_state()
+                break
             break
-        case 1
+        case ROLL_PROBS_MODE
             roll_probs_update_display_state()
             break
 
 fn stat_update_sprites(U oam_index) U
     switch stat_mode
-        case 0
-            return length_stats_update_sprites(oam_index)
-        case 1
+        case LENGTH_STATS_MODE
+            switch submode
+                case LENGTH_STATS_SUBMODE_INPUTS
+                    return length_stats_update_sprites(oam_index)
+        case ROLL_PROBS_MODE
             return roll_probs_update_sprites(oam_index)
 
 fn stat_update_bg()
     switch stat_mode
-        case 0
-            // length_stats_update_bg()
+        case LENGTH_STATS_MODE
+            switch submode
+                case LENGTH_STATS_SUBMODE_INPUTS
+                    length_stats_update_bg()
+                    break
             break
-        case 1
+        case ROLL_PROBS_MODE
             roll_probs_update_bg()
             break
 
 fn stat_update_bg_stop()
     switch stat_mode
-        case 0
-            // length_stats_update_bg_stop()
+        case LENGTH_STATS_MODE
+            switch submode
+                case LENGTH_STATS_SUBMODE_INPUTS
+                    length_stats_update_bg_stop()
+                break
+            break
+        case ROLL_PROBS_MODE
+            switch submode
+                case LENGTH_STATS_SUBMODE_INPUTS
+                    roll_probs_update_bg_stop()
+                break
             break
 
 fn stat_clean_bg()
     switch stat_mode
-        case 0
-            length_stats_clean_bg()
+        case LENGTH_STATS_MODE
+            switch submode
+                case LENGTH_STATS_SUBMODE_INPUTS
+                    length_stats_clean_bg()
+                break
             break
-        case 1
-            roll_probs_clean_bg()
+        case ROLL_PROBS_MODE
+            switch submode
+                case LENGTH_STATS_SUBMODE_INPUTS
+                    roll_probs_clean_bg()
+                break
             break

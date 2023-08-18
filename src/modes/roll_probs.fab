@@ -220,6 +220,9 @@ fn get_hz_color_bcd(U i) U
             return HZ_GRADIENT[j]
     return HZ_GRADIENT[11]
 
+// placeholder for stat_handler
+fn roll_probs_update_bg_stop()
+
 // restores the background to empty
 fn roll_probs_clean_bg()
     ppu_reset_addr($2050)
