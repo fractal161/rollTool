@@ -73,8 +73,7 @@ fn roll_probs_basic_update_sprites(U oam_index) U
     U i = 0
     // iterate through freq list, taking the max freq each time
     while i < 3
-        // TODO: freq_flag and max_flag are being optimized out entirely
-        UU freq_flag = 0
+        UU freq_flag = 1
         U max_freq = 0
         U max_index = 0
         UU max_flag = 0
