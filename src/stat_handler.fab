@@ -29,6 +29,7 @@ fn inc_submode()
 fn stat_init_bg()
     switch stat_mode
         case LENGTH_STATS_MODE
+            // all length stats use same layout
             switch submode
                 case LENGTH_STATS_INPUTS
                     length_stats_init_bg()
@@ -37,7 +38,7 @@ fn stat_init_bg()
         case ROLL_PROBS_MODE
             switch submode
                 case ROLL_PROBS_EXTRA
-                    roll_probs_init_bg()
+                    roll_probs_extra_init_bg()
                 break
             break
 
@@ -64,13 +65,13 @@ fn stat_update_display_state()
         case LENGTH_STATS_MODE
             switch submode
                 case LENGTH_STATS_INPUTS
-                    length_stats_update_display_state()
+                    length_stats_inputs_update_display_state()
                 break
             break
         case ROLL_PROBS_MODE
             switch submode
                 case ROLL_PROBS_EXTRA
-                    roll_probs_update_display_state()
+                    roll_probs_extra_update_display_state()
                     break
             break
 
@@ -79,15 +80,16 @@ fn stat_update_sprites(U oam_index) U
         case LENGTH_STATS_MODE
             switch submode
                 case LENGTH_STATS_INPUTS
-                    return length_stats_update_sprites(oam_index)
+                    return length_stats_inputs_update_sprites(oam_index)
         case ROLL_PROBS_MODE
             switch submode
                 case ROLL_PROBS_EXTRA
-                    return roll_probs_update_sprites(oam_index)
+                    return roll_probs_extra_update_sprites(oam_index)
 
 fn stat_update_bg()
     switch stat_mode
         case LENGTH_STATS_MODE
+            // currently does nothing
             switch submode
                 case LENGTH_STATS_INPUTS
                     length_stats_update_bg()
@@ -96,19 +98,21 @@ fn stat_update_bg()
         case ROLL_PROBS_MODE
             switch submode
                 case ROLL_PROBS_EXTRA
-                    roll_probs_update_bg()
+                    roll_probs_extra_update_bg()
                     break
             break
 
 fn stat_update_bg_stop()
     switch stat_mode
         case LENGTH_STATS_MODE
+            // currently does nothing
             switch submode
                 case LENGTH_STATS_INPUTS
                     length_stats_update_bg_stop()
                     break
             break
         case ROLL_PROBS_MODE
+            // currently does nothing
             switch submode
                 case ROLL_PROBS_EXTRA
                     roll_probs_update_bg_stop()
@@ -118,6 +122,7 @@ fn stat_update_bg_stop()
 fn stat_clean_bg()
     switch stat_mode
         case LENGTH_STATS_MODE
+            // all length stats use same layout
             switch submode
                 case LENGTH_STATS_INPUTS
                     length_stats_clean_bg()
@@ -126,6 +131,6 @@ fn stat_clean_bg()
         case ROLL_PROBS_MODE
             switch submode
                 case ROLL_PROBS_EXTRA
-                    roll_probs_clean_bg()
+                    roll_probs_extra_clean_bg()
                     break
             break

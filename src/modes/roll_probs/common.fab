@@ -33,46 +33,14 @@ ct U[6] NUM_OFFSETS = U[6]($00, $E0, $F0, $00, $E0, $F0)
 fn roll_probs_reset_state()
     freqs[0].packed_info = $F0
     freqs[0].freq = $10
+    roll_probs_extra_reset_state()
 
     // filler entry
-    probs_color[0] = $10
     probs_hi[0] = $0A
     probs_lo[0] = $00
     for U i = 1; i < 6; i += 1
         probs_hi[i] = '·'
         probs_lo[i] = '·'
-
-// updates the background for the current viz. assumes that it's already empty
-fn roll_probs_init_bg()
-    ppu_reset_addr($2050)
-    for U i = 0; i < len(rp_title); i += 1
-        {PPUDATA}(@rp_title[i])
-    UU row_addr = $208E
-    for U i = 0; i < 3; i += 1
-        ppu_reset_addr(row_addr)
-        {PPUDATA}('%')
-        {PPUDATA}('·')
-        {PPUDATA}($34) // left half of T
-        {PPUDATA}($35) // right half of T
-        {PPUDATA}('·')
-        {PPUDATA}('·')
-        {PPUDATA}('*')
-        {PPUDATA}('·')
-        {PPUDATA}('·')
-        {PPUDATA}('·')
-        {PPUDATA}('%')
-        {PPUDATA}('·')
-        {PPUDATA}($34) // left half of T
-        {PPUDATA}($35) // right half of T
-        {PPUDATA}('·')
-        {PPUDATA}('·')
-        {PPUDATA}('*')
-        row_addr += $40
-    // for the sprite that covers unused rows
-    ppu_reset_addr($3F1F)
-    {PPUDATA}($0F)
-    // this really cuts it close
-    roll_probs_update_bg()
 
 fn roll_probs_update_state_start()
     for U i = 0; i < 16; i += 1
@@ -94,125 +62,6 @@ fn roll_probs_update_state_poll(U i, Bool poll)
             U tap_len = frame_index.a - sub_info[i].start_index
             sub_info[i].packed_info = tap_len << 3 | (taps + 1)
 
-fn roll_probs_update_display_state()
-    // clear freq list by setting all frequencies to 0
-    for U i = 0; i < 16; i += 1
-        freqs[i].freq = $00
-    // clear values used to display the probs
-    for U i = 0; i < 6; i += 1
-        // hack to make the update_bg logic a bit nicer
-        probs_hi[i] = '·'
-        probs_lo[i] = '·'
-    // take all measurements (taps+duration) and put them in frequency list
-    for U i = 0; i < 16; i += 1
-        U packed = sub_info[i].packed_info
-        for U j = 0; j < 16; j += 1
-            if freqs[j].freq == 0
-                freqs[j].packed_info = packed
-                freqs[j].freq = 1
-                break
-            if packed == freqs[j].packed_info
-                freqs[j].freq += 1
-                break
-
-fn roll_probs_update_sprites(U oam_index) U
-    UU taken_freqs = $00
-    U i = 0
-    // iterate through freq list, taking the max freq each time
-    while i < 6
-        UU freq_flag = 1
-        U max_freq = 0
-        U max_index = 0
-        UU max_flag = 0
-        for U j = 0; j < 16; j += 1
-            // means end of list has been reached
-            if freqs[j].freq == 0
-                break
-            // make sure entry hasn't already been considered
-            if freq_flag & taken_freqs > 0
-                freq_flag <<= 1
-                continue
-            if freqs[j].freq > max_freq
-                max_freq = freqs[j].freq
-                max_index = j
-                max_flag = freq_flag
-            freq_flag <<= 1
-        // means that everything has been taken
-        if max_freq == 0
-            break
-        taken_freqs |= max_flag
-        U length = freqs[max_index].packed_info >> 3
-        // should be +1, but this makes formula a bit quicker
-        U taps = freqs[max_index].packed_info & %111
-        // fetch hz digits from table
-        U hz_bcd = $00
-        // if taps == 0, then actual tap count is 0 or 1
-        if taps > 0
-            U index = ((taps - 1) << 5) + length
-            hz_bcd = HZ_TABLE[index]
-        // layout info
-        U height = 31 + (i << 4)
-        U h_offset = 124
-        U spr_color = 0
-        U num_off = NUM_OFFSETS[i]
-        if i > 2
-            height -= 48
-            h_offset += 80
-            spr_color = 1
-        // store probs, since these are rendered in the bg
-        // these are precomputed since nmi time is apparently tight
-        U prob = decimals_16[max_freq]
-        probs_hi[i] = prob >> 4
-        probs_lo[i] = prob & %1111
-        probs_color[i] = get_hz_color_bcd(hz_bcd)
-        // write tap counts
-        if freqs[max_index].packed_info == $F0
-            oam_index = push_oam(oam_index, h_offset, height, 0, %11)
-        else
-            oam_index = push_oam(oam_index, h_offset, height, taps+1, %11)
-        // write hz digits
-        oam_index = push_oam(oam_index, h_offset+20,
-            height, num_off + (hz_bcd >> 4), spr_color
-        )
-        oam_index = push_oam(oam_index, h_offset+28,
-            height, num_off + (hz_bcd & %1111), spr_color
-        )
-        i += 1
-    // now, fill remaining spaces with blacks
-    while i < 6
-        U height = 31 + (i << 4)
-        U h_offset = 112
-        if i > 2
-            height -= 48
-            h_offset += 80
-        i += 1
-        // 112, 132, 160
-        oam_index = push_oam(oam_index, h_offset, height, $FD, %11)
-        oam_index = push_oam(oam_index, h_offset+20, height, $FD, %11)
-        oam_index = push_oam(oam_index, h_offset+48, height, $FD, %11)
-
-    return oam_index
-
-fn roll_probs_update_bg()
-    UU addr = $208C
-    for U i = 0; i < 6; i += 1
-        if i == 3
-            addr += $0A // $2096 - $208C
-            addr -= $C0
-        ppu_reset_addr(addr)
-        // thanks to how this is initialized, handles blanks
-        {PPUDATA}(probs_hi[i])
-        {PPUDATA}(probs_lo[i])
-        addr += UU($40)
-    // update sprite palette
-    ppu_reset_addr($3F11)
-    for U i = 0; i < 3; i += 1
-        {PPUDATA}(probs_color[i])
-    // dummy palette value
-    {PPUDATA}($0F)
-    for U i = 3; i < 6; i += 1
-        {PPUDATA}(probs_color[i])
-
 fn get_hz_color_bcd(U i) U
     for U j = 0; j < 11; j += 1
         set_breakpoint($6543)
@@ -222,15 +71,3 @@ fn get_hz_color_bcd(U i) U
 
 // placeholder for stat_handler
 fn roll_probs_update_bg_stop()
-
-// restores the background to empty
-fn roll_probs_clean_bg()
-    ppu_reset_addr($2050)
-    for U i = 0; i < len(rp_title); i += 1
-        {PPUDATA}('·')
-    UU row_addr = $208C // start of probs
-    for U i = 0; i < 3; i += 1
-        ppu_reset_addr(row_addr)
-        for U j = 0; j < 19; j += 1
-            {PPUDATA}('·')
-        row_addr += $40
