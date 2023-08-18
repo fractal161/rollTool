@@ -85,8 +85,6 @@ fn length_stats_update_state_poll(U i, Bool poll)
             return
         // update sums/extremes for spaces
         ls_sum_spaces += current_length
-        // this is needed to not take too much time???
-        fence
         ls_sum2_spaces += current_length * current_length
         max_length_spaces = max(current_length, max_length_spaces)
         if tap_count > 2

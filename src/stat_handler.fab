@@ -2,7 +2,8 @@ vars /stats
     U stat_mode = 0
     U submode = 0
 
-ct U[NUM_STAT_MODES] submodes = U[NUM_STAT_MODES](1, 2)
+// MUST BE KEPT IN SYNC WITH THE MODE CONSTANTS
+ct U[NUM_STAT_MODES] submodes = U[NUM_STAT_MODES](1, 3)
 
 // assigning these here makes it simpler to change their order
 ct U LENGTH_STATS_MODE = 1
@@ -37,6 +38,9 @@ fn stat_init_bg()
                     break
                 case LENGTH_STATS_SPACES
                     length_stats_spaces_init_bg()
+                    break
+                case LENGTH_STATS_ALL
+                    length_stats_all_init_bg()
                     break
             break
         case ROLL_PROBS_MODE
@@ -74,6 +78,9 @@ fn stat_update_display_state()
                 case LENGTH_STATS_SPACES
                     length_stats_spaces_update_display_state()
                     break
+                case LENGTH_STATS_ALL
+                    length_stats_all_update_display_state()
+                    break
             break
         case ROLL_PROBS_MODE
             switch submode
@@ -91,6 +98,8 @@ fn stat_update_sprites(U oam_index) U
                     return length_stats_update_sprites(oam_index)
                 case LENGTH_STATS_SPACES
                     return length_stats_update_sprites(oam_index)
+                case LENGTH_STATS_ALL
+                    return length_stats_update_sprites(oam_index)
         case ROLL_PROBS_MODE
             switch submode
                 case ROLL_PROBS_EXTRA
@@ -105,6 +114,9 @@ fn stat_update_bg()
                     length_stats_update_bg()
                     break
                 case LENGTH_STATS_SPACES
+                    length_stats_update_bg()
+                    break
+                case LENGTH_STATS_ALL
                     length_stats_update_bg()
                     break
             break
@@ -124,6 +136,9 @@ fn stat_update_bg_stop()
                     length_stats_update_bg_stop()
                     break
                 case LENGTH_STATS_SPACES
+                    length_stats_update_bg_stop()
+                    break
+                case LENGTH_STATS_ALL
                     length_stats_update_bg_stop()
                     break
             break
@@ -146,6 +161,9 @@ fn stat_clean_bg()
                     break
                 case LENGTH_STATS_SPACES
                     length_stats_spaces_clean_bg()
+                    break
+                case LENGTH_STATS_ALL
+                    length_stats_all_clean_bg()
                     break
             break
         case ROLL_PROBS_MODE

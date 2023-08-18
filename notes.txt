@@ -18,3 +18,6 @@ TIMING (a lot of this seems outdated)
 
  - with all of the above, a total of 5*15 + 20 + 10 = 95 scanlines used, so maybe like 160 left? that's enough for 8 computations
  - udiv_24 takes like 20 scanlines????
+
+CAUSES OF BUGS
+ - the length_stats may have timing issues since multiplications are slow and it does a lot of them. previously i had to add a random fence to make things work and that doesn't seem to be the case now
