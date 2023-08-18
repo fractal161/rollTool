@@ -1,11 +1,9 @@
 charmap("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ·.-*%⊏⊐⊑⊒[]_⎺")
 
 vars /record_state
-    Bool recording = false
-    Bool last_recording = false
     U cooldown = 0
-    Bool recording_just_finished = false
-    U new_stat_mode = 0
+    U recording_flags = 0
+    U trans_flags = 0
     Pad nmi_pads
 
 vars /ppu
@@ -46,7 +44,7 @@ fn load_bg()
 
 fn update_sprites()
     U oam_index = 0
-    if recording
+    if recording_flags & RECORDING
         oam_index = push_oam(oam_index, 12, 19, RECORD_SPRITE, %11)
     // write hz sprites
     oam_index = stat_update_sprites(oam_index)
@@ -60,7 +58,7 @@ fn handle_poll()
     // ignore polls when stat mode is changing
     // TODO: may cause really subtle bugs, will have to think abt this more
     // p sure this is fine though
-    if new_stat_mode > 0
+    if trans_flags != 0
         return
     Bool is_button_pressed = pads[0].held & (BUTTON_LEFT | BUTTON_RIGHT)
     if !is_button_pressed
@@ -68,7 +66,7 @@ fn handle_poll()
     // updates polls this frame
     polls_this_frame |= UU(1) << subframe_index
     cooldown = COOLDOWN_THRESHOLD
-    if !recording
+    if !(recording_flags & RECORDING)
         // special case if recording begins with the nmi poll
         // done so the first poll which would be recognized by the
         // actual game lines up in all cases
@@ -76,7 +74,7 @@ fn handle_poll()
             frame_index = 1
         else
             frame_index = 0
-        recording = true
+        recording_flags |= RECORDING
         
         main_hz_update_state_start()
         input_stream_update_state_start()
@@ -145,7 +143,7 @@ nmi main_nmi()
     nmi_pads.pressed = ~nmi_pads.held & pads[0].held
     nmi_pads.held = pads[0].held
     fence
-    if recording
+    if recording_flags & RECORDING
         main_hz_update_bg()
         frame_row_update_bg()
         input_stream_update_bg()
@@ -153,19 +151,19 @@ nmi main_nmi()
 
         polls_this_frame = 0
         frame_index += 1
-    else if new_stat_mode == 1
+    else if trans_flags & TRANS_MODE_CLEAN
         stat_clean_bg()
         // change mode here
         stat_mode += 1
         if stat_mode >= NUM_STAT_MODES
             stat_mode = 0
-        new_stat_mode = 2
-    else if new_stat_mode == 2
+        trans_flags = TRANS_MODE_INIT
+    else if trans_flags & TRANS_MODE_INIT
         stat_init_bg()
-        new_stat_mode = 0
-    else if recording_just_finished
+        trans_flags = 0
+    else if recording_flags & RECORDING_JUST_FINISHED
         input_stream_update_bg_stop()
-        recording_just_finished = false
+        recording_flags &= ~RECORDING_JUST_FINISHED
 
     // schedule irq for showing nt1. this needs to happen *after* any
     // writes to $2006, since those writes may affect the scanline counter
@@ -211,7 +209,7 @@ mode main()
 
     // wait forever, one frame at a time:
     while true
-        if last_recording
+        if recording_flags & LAST_RECORDING
             // start by iterating through the polls of last frame
             UU polls = polls_last_frame
             for U i = 0; i < 16; i += 1
@@ -221,15 +219,17 @@ mode main()
                 prev_poll_on = poll
                 polls >>= 1
 
-            // then update any additional state
-            main_hz_update_state_record()
-            stat_update_state_record()
         else if nmi_pads.pressed & BUTTON_START
             // schedule previous mode cleanup, new mode init
-            new_stat_mode = 1
+            trans_flags = TRANS_MODE_CLEAN
         else if nmi_pads.pressed & BUTTON_SELECT
             // reset stat mode
 
+        // if no transitions are happening, we use polled state to figure out
+        // what to display for the next frame
+        if trans_flags == 0
+            main_hz_update_display_state()
+            stat_update_display_state()
         update_sprites()
         // use polls_last_frame and polls_this_frame to decide
         // since this happens after nmi, guaranteed to work
@@ -242,15 +242,18 @@ mode main()
         wait_for_last_poll()
         fence
 
-        if last_recording
+        if recording_flags & LAST_RECORDING
             if cooldown == 0
-                recording = false
-                recording_just_finished = true
+                recording_flags &= ~RECORDING
+                recording_flags |= RECORDING_JUST_FINISHED
             else
                 cooldown -= 1
 
         fence
-        last_recording = recording
+        if recording_flags & RECORDING
+            recording_flags |= LAST_RECORDING
+        else
+            recording_flags &= ~LAST_RECORDING
         polls_last_frame = polls_this_frame
         fence
         nmi

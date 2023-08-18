@@ -26,7 +26,7 @@ fn example_update_state_start()
 fn example_update_state_poll(U i, Bool poll)
 
 // update state during recording, after all previous polls have been processed
-fn example_update_state_record()
+fn example_update_display_state()
 
 // uses current state to determine what sprites to display on the next frame
 // returns the updated oam_index

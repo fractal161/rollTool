@@ -40,7 +40,7 @@ fn main_hz_update_state_poll(U i, Bool poll)
             tap_count += 1
         end_index = (frame_index << 4) + UU(i) - 16
 
-fn main_hz_update_state_record()
+fn main_hz_update_display_state()
     // big computation
     if tap_count > 1 && tap_count < $FF
         // should always fit

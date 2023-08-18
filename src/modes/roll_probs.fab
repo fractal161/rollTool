@@ -94,9 +94,7 @@ fn roll_probs_update_state_poll(U i, Bool poll)
             U tap_len = frame_index.a - sub_info[i].start_index
             sub_info[i].packed_info = tap_len << 3 | (taps + 1)
 
-// TODO TODO TODO: actually handle empty slices correctly
-
-fn roll_probs_update_state_record()
+fn roll_probs_update_display_state()
     // clear freq list by setting all frequencies to 0
     for U i = 0; i < 16; i += 1
         freqs[i].freq = $00

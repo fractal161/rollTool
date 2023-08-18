@@ -35,16 +35,13 @@ data /scanline
         U(15)
         U(20)
 
-data /flags
-    [] powers_of_two
-        U(1)
-        U(2)
-        U(4)
-        U(8)
-        U(16)
-        U(32)
-        U(64)
-        U(128)
+// bit flag constants
+ct U TRANS_MODE_CLEAN = 1 << 0
+ct U TRANS_MODE_INIT  = 1 << 1
+
+ct U RECORDING               = 1 << 0
+ct U LAST_RECORDING          = 1 << 1
+ct U RECORDING_JUST_FINISHED = 1 << 2
 
 // how many input display rows
 ct U NUM_VISIBLE_ROWS = 6
