@@ -143,15 +143,7 @@ nmi main_nmi()
     nmi_pads.pressed = ~nmi_pads.held & pads[0].held
     nmi_pads.held = pads[0].held
     fence
-    if recording_flags & RECORDING
-        main_hz_update_bg()
-        frame_row_update_bg()
-        input_stream_update_bg()
-        stat_update_bg()
-
-        polls_this_frame = 0
-        frame_index += 1
-    else if trans_flags & TRANS_MODE_CLEAN
+    if trans_flags & TRANS_MODE_CLEAN
         stat_clean_bg()
         // change mode here
         inc_stat_mode()
@@ -169,6 +161,15 @@ nmi main_nmi()
     else if recording_flags & RECORDING_JUST_FINISHED
         input_stream_update_bg_stop()
         recording_flags &= ~RECORDING_JUST_FINISHED
+    else 
+        main_hz_update_bg()
+        frame_row_update_bg()
+        input_stream_update_bg()
+        stat_update_bg()
+
+        if recording_flags & RECORDING
+            polls_this_frame = 0
+            frame_index += 1
 
     // schedule irq for showing nt1. this needs to happen *after* any
     // writes to $2006, since those writes may affect the scanline counter
