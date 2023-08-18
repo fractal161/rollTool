@@ -7,13 +7,13 @@ ct U[NUM_STAT_MODES] submodes = U[NUM_STAT_MODES](2, 3)
 
 // assigning these here makes it simpler to change their order
 ct U LENGTH_STATS_MODE = 1
-ct U LENGTH_STATS_INPUTS = 0
-ct U LENGTH_STATS_SPACES = 1
-ct U LENGTH_STATS_ALL = 2
+ct U LENGTH_STATS_INPUTS = 1
+ct U LENGTH_STATS_SPACES = 2
+ct U LENGTH_STATS_ALL = 0
 
 ct U ROLL_PROBS_MODE = 0
-ct U ROLL_PROBS_EXTRA = 0
-ct U ROLL_PROBS_BASIC = 1
+ct U ROLL_PROBS_EXTRA = 1
+ct U ROLL_PROBS_BASIC = 0
 
 fn inc_stat_mode()
     // TODO: memorize this

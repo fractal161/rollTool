@@ -5,6 +5,7 @@ struct RangeFreq
 
 vars /roll_probs_basic
     RangeFreq[9] range_freqs = RangeFreq[9]()
+    U[6] basic_probs_color = U[6]()
 
 data /roll_probs_basic
     [] rp_basic_title
@@ -40,7 +41,7 @@ fn roll_probs_basic_init_bg()
     // for the sprite that covers unused rows
     ppu_reset_addr($3F1F)
     {PPUDATA}($0F)
-    //roll_probs_basic_update_bg()
+    roll_probs_basic_update_bg()
 
 fn roll_probs_basic_update_display_state()
     // clear freq list by setting all frequencies to 0
@@ -70,9 +71,9 @@ fn roll_probs_basic_update_display_state()
 
 fn roll_probs_basic_update_sprites(U oam_index) U
     UU taken_freqs = $00
-    U i = 0
+    U i = 0 // represents two times the total row, to simplify some calculations
     // iterate through freq list, taking the max freq each time
-    while i < 3
+    while i < 6
         UU freq_flag = 1
         U max_freq = 0
         U max_index = 0
@@ -94,61 +95,80 @@ fn roll_probs_basic_update_sprites(U oam_index) U
             break
         taken_freqs |= max_flag
         // layout info
-        U height = 31 + (i << 4)
+        U height = 31 + (i << 3)
         U h_offset = 96
-        U spr_color = 0
-        U num_off = NUM_OFFSETS[i]
         // write probs
         U prob = decimals_16[max_freq]
         oam_index = push_oam(oam_index, h_offset, height, prob >> 4, %11)
         oam_index = push_oam(oam_index, h_offset+8, height, prob & %1111, %11)
         // write tap counts
         oam_index = push_oam(oam_index, h_offset+32, height, max_index, %11)
+
         // write hz digits for min hz (which uses max_length)
         U hz_bcd = $00
         // if taps == 0, then actual tap count is 0 or 1
         if max_index > 0
             U index = ((max_index - 2) << 5) + range_freqs[max_index].max_length
             hz_bcd = HZ_TABLE[index]
+        U spr_color = 0
+        if i > 2
+            spr_color = 1
+        U num_off = NUM_OFFSETS[i]
+        basic_probs_color[i] = get_hz_color_bcd(hz_bcd)
         oam_index = push_oam(oam_index, h_offset+88,
-            height, (hz_bcd >> 4), %11
+            height, num_off + (hz_bcd >> 4), spr_color
         )
         oam_index = push_oam(oam_index, h_offset+96,
-            height, (hz_bcd & %1111), %11
+            height, num_off + (hz_bcd & %1111), spr_color
         )
+        
+        i += 1
+
         // write hz digits for max hz (which uses min_length)
         hz_bcd = $00
         // if taps == 0, then actual tap count is 0 or 1
         if max_index > 0
             U index = ((max_index - 2) << 5) + range_freqs[max_index].min_length
             hz_bcd = HZ_TABLE[index]
+        spr_color = 0
+        if i > 2
+            spr_color = 1
+        num_off = NUM_OFFSETS[i]
+        basic_probs_color[i] = get_hz_color_bcd(hz_bcd)
         oam_index = push_oam(oam_index, h_offset+112,
-            height, (hz_bcd >> 4), %11
+            height, num_off + (hz_bcd >> 4), spr_color
         )
         oam_index = push_oam(oam_index, h_offset+120,
-            height, (hz_bcd & %1111), %11
+            height, num_off + (hz_bcd & %1111), spr_color
         )
 
         i += 1
     // now, fill remaining spaces with blacks
     // ignoring for now because bugs
-    while i < 3
-    //    U height = 31 + (i << 4)
-    //    U h_offset = 112
-    //    if i > 2
-    //        height -= 48
-    //        h_offset += 80
-        i += 1
-    //    // 112, 132, 160
-    //    oam_index = push_oam(oam_index, h_offset, height, $FD, %11)
-    //    oam_index = push_oam(oam_index, h_offset+20, height, $FD, %11)
-    //    oam_index = push_oam(oam_index, h_offset+48, height, $FD, %11)
+    while i < 6
+        U height = 31 + (i << 3)
+        U h_offset = 96
+        // 112, 132, 160
+        oam_index = push_oam(oam_index, h_offset+16, height, $FD, %11)
+        oam_index = push_oam(oam_index, h_offset+48, height, $FD, %11)
+        oam_index = push_oam(oam_index, h_offset+56, height, $FD, %11)
+        oam_index = push_oam(oam_index, h_offset+64, height, $FD, %11)
+        oam_index = push_oam(oam_index, h_offset+72, height, $FD, %11)
+        oam_index = push_oam(oam_index, h_offset+104, height, $FD, %11)
+        oam_index = push_oam(oam_index, h_offset+128, height, $FD, %11)
+        i += 2
 
     return oam_index
 
-// empty for now since we're gonna try and go all sprites
-// if we want more colors then this will contain stuff
 fn roll_probs_basic_update_bg()
+    // update sprite palette
+    ppu_reset_addr($3F11)
+    for U i = 0; i < 3; i += 1
+        {PPUDATA}(basic_probs_color[i])
+    // dummy palette value
+    {PPUDATA}($0F)
+    for U i = 3; i < 6; i += 1
+        {PPUDATA}(basic_probs_color[i])
 
 // restores the background to empty
 fn roll_probs_basic_clean_bg()
