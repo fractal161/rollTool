@@ -1,4 +1,4 @@
-roll.nes: src/*.fab src/modes/*.fab chr/*.png scripts/patch_mmc3.py
+roll.nes: src/*.fab src/modes/*/*.fab chr/*.png scripts/patch_mmc3.py
 	./nesfab/nesfab roll.cfg --mlb "roll.mlb"
 	python scripts/patch_mmc3.py
 	sed -i "s/NesPrgRom/P/g" roll.mlb
