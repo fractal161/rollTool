@@ -1,11 +1,30 @@
+struct TapFreq
+    U packed_info
+    U freq
+
+vars /roll_probs_extra
+    TapFreq[16] freqs = TapFreq[16]()
+    U[6] extra_probs_hi = U[6]()
+    U[6] extra_probs_lo = U[6]()
+    U[6] probs_color = U[6]()
+
+data /roll_probs_extra
+    [] rp_extra_title
+        ("ROLL·PROBS")
+
 fn roll_probs_extra_reset_state()
     probs_color[0] = $10
+    //extra_probs_hi[0] = $0A
+    //extra_probs_lo[1] = $00
+    for U i = 1; i < 6; i += 1
+        extra_probs_hi[i] = '·'
+        extra_probs_lo[i] = '·'
 
 // updates the background for the current viz. assumes that it's already empty
 fn roll_probs_extra_init_bg()
     ppu_reset_addr($2050)
-    for U i = 0; i < len(rp_title); i += 1
-        {PPUDATA}(@rp_title[i])
+    for U i = 0; i < len(rp_extra_title); i += 1
+        {PPUDATA}(@rp_extra_title[i])
     UU row_addr = $208E
     for U i = 0; i < 3; i += 1
         ppu_reset_addr(row_addr)
@@ -40,8 +59,8 @@ fn roll_probs_extra_update_display_state()
     // clear values used to display the probs
     for U i = 0; i < 6; i += 1
         // hack to make the update_bg logic a bit nicer
-        probs_hi[i] = '·'
-        probs_lo[i] = '·'
+        extra_probs_hi[i] = '·'
+        extra_probs_lo[i] = '·'
     // take all measurements (taps+duration) and put them in frequency list
     for U i = 0; i < 16; i += 1
         U packed = sub_info[i].packed_info
@@ -101,8 +120,8 @@ fn roll_probs_extra_update_sprites(U oam_index) U
         // store probs, since these are rendered in the bg
         // these are precomputed since nmi time is apparently tight
         U prob = decimals_16[max_freq]
-        probs_hi[i] = prob >> 4
-        probs_lo[i] = prob & %1111
+        extra_probs_hi[i] = prob >> 4
+        extra_probs_lo[i] = prob & %1111
         probs_color[i] = get_hz_color_bcd(hz_bcd)
         // write tap counts
         if freqs[max_index].packed_info == $F0
@@ -140,8 +159,8 @@ fn roll_probs_extra_update_bg()
             addr -= $C0
         ppu_reset_addr(addr)
         // thanks to how this is initialized, handles blanks
-        {PPUDATA}(probs_hi[i])
-        {PPUDATA}(probs_lo[i])
+        {PPUDATA}(extra_probs_hi[i])
+        {PPUDATA}(extra_probs_lo[i])
         addr += UU($40)
     // update sprite palette
     ppu_reset_addr($3F11)
@@ -155,7 +174,7 @@ fn roll_probs_extra_update_bg()
 // restores the background to empty
 fn roll_probs_extra_clean_bg()
     ppu_reset_addr($2050)
-    for U i = 0; i < len(rp_title); i += 1
+    for U i = 0; i < len(rp_extra_title); i += 1
         {PPUDATA}('·')
     UU row_addr = $208C // start of probs
     for U i = 0; i < 3; i += 1

@@ -10,37 +10,17 @@ struct TapInfo
     U packed_info
     U start_index
 
-struct TapFreq
-    U packed_info
-    U freq
-
 vars /roll_probs_core
     TapInfo[16] sub_info = TapInfo[16]()
     UU sub_prev_poll_on = 0
 
-vars /roll_probs
-    TapFreq[16] freqs = TapFreq[16]()
-    U[6] probs_hi = U[6]()
-    U[6] probs_lo = U[6]()
-    U[6] probs_color = U[6]()
-
-data /roll_probs
-    [] rp_title
-        ("ROLL·PROBS")
-
 ct U[6] NUM_OFFSETS = U[6]($00, $E0, $F0, $00, $E0, $F0)
 
 fn roll_probs_reset_state()
-    freqs[0].packed_info = $F0
-    freqs[0].freq = $10
+    for U i = 0; i < 16; i += 1
+        sub_info[i].packed_info = $F0
     roll_probs_extra_reset_state()
-
-    // filler entry
-    probs_hi[0] = $0A
-    probs_lo[0] = $00
-    for U i = 1; i < 6; i += 1
-        probs_hi[i] = '·'
-        probs_lo[i] = '·'
+    roll_probs_basic_reset_state()
 
 fn roll_probs_update_state_start()
     for U i = 0; i < 16; i += 1

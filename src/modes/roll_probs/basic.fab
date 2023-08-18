@@ -1,0 +1,164 @@
+struct RangeFreq
+    U min_length
+    U max_length
+    U freq
+
+vars /roll_probs_basic
+    RangeFreq[9] range_freqs = RangeFreq[9]()
+
+data /roll_probs_basic
+    [] rp_basic_title
+        ("ROLL·PROBS")
+
+fn roll_probs_basic_reset_state()
+    //range_freqs[0].freq = $10
+
+// updates the background for the current viz. assumes that it's already empty
+fn roll_probs_basic_init_bg()
+    ppu_reset_addr($2050)
+    for U i = 0; i < len(rp_basic_title); i += 1
+        {PPUDATA}(@rp_basic_title[i])
+    UU row_addr = $208E
+    for U i = 0; i < 3; i += 1
+        ppu_reset_addr(row_addr)
+        {PPUDATA}('%')
+        {PPUDATA}('·')
+        {PPUDATA}('·')
+        {PPUDATA}('·')
+        {PPUDATA}('T')
+        {PPUDATA}('A')
+        {PPUDATA}('P')
+        {PPUDATA}('S')
+        {PPUDATA}('·')
+        {PPUDATA}('·')
+        {PPUDATA}('·')
+        {PPUDATA}('-')
+        {PPUDATA}('·')
+        {PPUDATA}('·')
+        {PPUDATA}('*')
+        row_addr += $40
+    // for the sprite that covers unused rows
+    ppu_reset_addr($3F1F)
+    {PPUDATA}($0F)
+    //roll_probs_basic_update_bg()
+
+fn roll_probs_basic_update_display_state()
+    // clear freq list by setting all frequencies to 0
+    for U i = 0; i < 9; i += 1
+        range_freqs[i].freq = $00
+    //// take all measurements (taps+duration) and put them in frequency list
+    for U i = 0; i < 16; i += 1
+        U packed = sub_info[i].packed_info
+        if packed == $F0
+            range_freqs[0].freq += 1
+        else
+            U taps = (packed & %111) + 1
+            U length = packed >> 3
+            if range_freqs[taps].freq == 0
+                range_freqs[taps].min_length = length
+                range_freqs[taps].max_length = length
+            else
+                range_freqs[taps].min_length = min(
+                    length,
+                    range_freqs[taps].min_length
+                )
+                range_freqs[taps].max_length = max(
+                    length,
+                    range_freqs[taps].max_length
+                )
+            range_freqs[taps].freq += 1
+
+fn roll_probs_basic_update_sprites(U oam_index) U
+    UU taken_freqs = $00
+    U i = 0
+    // iterate through freq list, taking the max freq each time
+    while i < 3
+        // TODO: freq_flag and max_flag are being optimized out entirely
+        UU freq_flag = 0
+        U max_freq = 0
+        U max_index = 0
+        UU max_flag = 0
+        // unlike in the basic case, we scan the whole list
+        for U j = 0; j < 9; j += 1
+            // make sure entry hasn't already been considered
+            set_breakpoint($6543)
+            if freq_flag & taken_freqs > 0
+                freq_flag <<= 1
+                continue
+            if range_freqs[j].freq > max_freq
+                max_freq = range_freqs[j].freq
+                max_index = j
+                max_flag = freq_flag
+            freq_flag <<= 1
+        // means that everything has been taken
+        if max_freq == 0
+            break
+        taken_freqs |= max_flag
+        // layout info
+        U height = 31 + (i << 4)
+        U h_offset = 96
+        U spr_color = 0
+        U num_off = NUM_OFFSETS[i]
+        // write probs
+        U prob = decimals_16[max_freq]
+        oam_index = push_oam(oam_index, h_offset, height, prob >> 4, %11)
+        oam_index = push_oam(oam_index, h_offset+8, height, prob & %1111, %11)
+        // write tap counts
+        oam_index = push_oam(oam_index, h_offset+32, height, max_index, %11)
+        // write hz digits for min hz (which uses max_length)
+        U hz_bcd = $00
+        // if taps == 0, then actual tap count is 0 or 1
+        if max_index > 0
+            U index = ((max_index - 2) << 5) + range_freqs[max_index].max_length
+            hz_bcd = HZ_TABLE[index]
+        oam_index = push_oam(oam_index, h_offset+88,
+            height, (hz_bcd >> 4), %11
+        )
+        oam_index = push_oam(oam_index, h_offset+96,
+            height, (hz_bcd & %1111), %11
+        )
+        // write hz digits for max hz (which uses min_length)
+        hz_bcd = $00
+        // if taps == 0, then actual tap count is 0 or 1
+        if max_index > 0
+            U index = ((max_index - 2) << 5) + range_freqs[max_index].min_length
+            hz_bcd = HZ_TABLE[index]
+        oam_index = push_oam(oam_index, h_offset+112,
+            height, (hz_bcd >> 4), %11
+        )
+        oam_index = push_oam(oam_index, h_offset+120,
+            height, (hz_bcd & %1111), %11
+        )
+
+        i += 1
+    // now, fill remaining spaces with blacks
+    // ignoring for now because bugs
+    while i < 3
+    //    U height = 31 + (i << 4)
+    //    U h_offset = 112
+    //    if i > 2
+    //        height -= 48
+    //        h_offset += 80
+        i += 1
+    //    // 112, 132, 160
+    //    oam_index = push_oam(oam_index, h_offset, height, $FD, %11)
+    //    oam_index = push_oam(oam_index, h_offset+20, height, $FD, %11)
+    //    oam_index = push_oam(oam_index, h_offset+48, height, $FD, %11)
+
+    return oam_index
+
+// empty for now since we're gonna try and go all sprites
+// if we want more colors then this will contain stuff
+fn roll_probs_basic_update_bg()
+
+// restores the background to empty
+fn roll_probs_basic_clean_bg()
+    ppu_reset_addr($2050)
+    for U i = 0; i < len(rp_basic_title); i += 1
+        {PPUDATA}('·')
+    UU row_addr = $208E
+    for U i = 0; i < 3; i += 1
+        ppu_reset_addr(row_addr)
+        for U j = 0; j < 15; j += 1
+            {PPUDATA}('·')
+        row_addr += $40
