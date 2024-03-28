@@ -80,15 +80,6 @@ fn handle_poll()
         input_stream_update_state_start()
         stat_update_state_start()
 
-fn init_prg_banks(U register, U bank)
-: +inline
-    fence
-    {MMC3_BANK_SELECT}(%00000110 | (register << 7))
-    {MMC3_BANK_DATA}(bank)
-    {MMC3_BANK_SELECT}(%00000111 | (register << 7))
-    {MMC3_BANK_DATA}(bank+1)
-    fence
-
 fn swap_chr_bank(U register, U bank)
 : +inline
     fence
@@ -123,8 +114,6 @@ irq subframe_poll()
     if subframe_index == 7
         // each hardware read is 4 cpu cycles
         // using fences guarantees each of these is its own instruction
-        {$100}()
-        fence
         {$100}()
         fence
         {$100}()
@@ -186,7 +175,9 @@ nmi main_nmi()
 
     // "irq 0"
     subframe_index = 0
+    fence
     handle_poll()
+    fence
     subframe_index = 1 // MUST HAPPEN BEFORE END OF VBLANK
     // set scroll to show current roll viz row
     ppu_reset_mid_scroll(0, 0, 0)
@@ -194,7 +185,7 @@ nmi main_nmi()
 mode main()
 : nmi main_nmi
 : irq subframe_poll
-    init_prg_banks(0, 0)
+: +static
     // set the palette
     palette = START_PALETTE
     ppu_upload_palette()
