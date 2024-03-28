@@ -11,6 +11,10 @@ data /roll_probs_basic
     [] rp_basic_title
         ("ROLL·PROBS")
 
+ct U[9] NUM_COLORS = U[9](
+    $00, $10, $16, $27, $37, $1A, $11, $14, $16
+)
+
 fn roll_probs_basic_reset_state()
     //range_freqs[0].freq = $10
 

@@ -80,6 +80,15 @@ fn handle_poll()
         input_stream_update_state_start()
         stat_update_state_start()
 
+fn init_prg_banks(U register, U bank)
+: +inline
+    fence
+    {MMC3_BANK_SELECT}(%00000110 | (register << 7))
+    {MMC3_BANK_DATA}(bank)
+    {MMC3_BANK_SELECT}(%00000111 | (register << 7))
+    {MMC3_BANK_DATA}(bank+1)
+    fence
+
 fn swap_chr_bank(U register, U bank)
 : +inline
     fence
@@ -161,7 +170,7 @@ nmi main_nmi()
     else if recording_flags & RECORDING_JUST_FINISHED
         input_stream_update_bg_stop()
         recording_flags &= ~RECORDING_JUST_FINISHED
-    else 
+    else
         main_hz_update_bg()
         frame_row_update_bg()
         input_stream_update_bg()
@@ -185,6 +194,7 @@ nmi main_nmi()
 mode main()
 : nmi main_nmi
 : irq subframe_poll
+    init_prg_banks(0, 0)
     // set the palette
     palette = START_PALETTE
     ppu_upload_palette()

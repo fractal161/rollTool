@@ -6,14 +6,14 @@ vars /roll_probs_extra
     TapFreq[16] freqs = TapFreq[16]()
     U[6] extra_probs_hi = U[6]()
     U[6] extra_probs_lo = U[6]()
-    U[6] probs_color = U[6]()
+    U[6] extra_probs_color = U[6]()
 
 data /roll_probs_extra
     [] rp_extra_title
         ("ROLL·PROBS")
 
 fn roll_probs_extra_reset_state()
-    probs_color[0] = $10
+    extra_probs_color[0] = $10
     //extra_probs_hi[0] = $0A
     //extra_probs_lo[1] = $00
     for U i = 1; i < 6; i += 1
@@ -122,7 +122,7 @@ fn roll_probs_extra_update_sprites(U oam_index) U
         U prob = decimals_16[max_freq]
         extra_probs_hi[i] = prob >> 4
         extra_probs_lo[i] = prob & %1111
-        probs_color[i] = get_hz_color_bcd(hz_bcd)
+        extra_probs_color[i] = get_hz_color_bcd(hz_bcd)
         // write tap counts
         if freqs[max_index].packed_info == $F0
             oam_index = push_oam(oam_index, h_offset, height, 0, %11)
@@ -165,11 +165,11 @@ fn roll_probs_extra_update_bg()
     // update sprite palette
     ppu_reset_addr($3F11)
     for U i = 0; i < 3; i += 1
-        {PPUDATA}(probs_color[i])
+        {PPUDATA}(extra_probs_color[i])
     // dummy palette value
     {PPUDATA}($0F)
     for U i = 3; i < 6; i += 1
-        {PPUDATA}(probs_color[i])
+        {PPUDATA}(extra_probs_color[i])
 
 // restores the background to empty
 fn roll_probs_extra_clean_bg()
